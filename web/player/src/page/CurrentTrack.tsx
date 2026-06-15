@@ -22,7 +22,15 @@ export const CurrentTrack = () => {
                 await syncPlaybackTrack();
             } catch (error) {
                 console.log(error);
-                setTrackStore({ trackName: e.data, trackArtist: "" });
+                setTrackStore({
+                    trackName: e.data,
+                    trackArtist: "",
+                    trackID: "",
+                    netEaseID: 0,
+                    elapsedMs: 0,
+                    updatedAt: Date.now(),
+                    lyrics: null,
+                });
             }
         });
     });
@@ -35,15 +43,37 @@ export const CurrentTrack = () => {
         }
     };
 
+    const netEaseURL = () => {
+        if (!trackStore.netEaseID) return "";
+        return `https://music.163.com/#/song?id=${trackStore.netEaseID}`;
+    };
+
+    const TrackLabel = () => (
+        <>
+            <span>{trackStore.trackName}</span>
+            <Show when={trackStore.trackArtist.length > 0}>
+                <span class={styles.artist}>{trackStore.trackArtist}</span>
+            </Show>
+        </>
+    );
+
     return (
         <div class={styles.box}>
             <Show when={trackStore.trackName.length > 0} fallback={<OfflineLabel />}>
-                <div onClick={copyToClipboard} class={styles.label}>
-                    <span>{trackStore.trackName}</span>
-                    <Show when={trackStore.trackArtist.length > 0}>
-                        <span class={styles.artist}>{trackStore.trackArtist}</span>
-                    </Show>
-                </div>
+                <Show
+                    when={netEaseURL()}
+                    fallback={
+                        <button type="button" onClick={copyToClipboard} class={styles.label}>
+                            <TrackLabel />
+                        </button>
+                    }
+                >
+                    {(url) => (
+                        <a href={url()} target="_blank" rel="noreferrer" class={styles.label}>
+                            <TrackLabel />
+                        </a>
+                    )}
+                </Show>
             </Show>
         </div>
     );

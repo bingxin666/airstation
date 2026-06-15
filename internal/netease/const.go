@@ -8,7 +8,7 @@ const (
 	propCookie      = "netease_cookie"
 
 	defaultQuality = QualityStandard
-	SyncInterval   = 24 * time.Minute
+	SyncInterval   = 24 * time.Hour
 )
 
 var bitrateByQuality = map[Quality]int{

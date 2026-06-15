@@ -68,11 +68,12 @@ type SongURL struct {
 }
 
 type Lyrics struct {
-	SongID int64  `json:"songID"`
-	Kind   string `json:"kind"`
-	YRC    string `json:"yrc"`
-	LRC    string `json:"lrc"`
-	Text   string `json:"text"`
+	SongID      int64  `json:"songID"`
+	Kind        string `json:"kind"`
+	YRC         string `json:"yrc"`
+	LRC         string `json:"lrc"`
+	Translation string `json:"translation"`
+	Text        string `json:"text"`
 }
 
 type Account struct {

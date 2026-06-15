@@ -19,6 +19,7 @@ export interface PlaybackLyrics {
     kind: "word" | "line" | "text" | "none";
     yrc: string;
     lrc: string;
+    translation: string;
     text: string;
 }
 

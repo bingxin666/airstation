@@ -104,6 +104,12 @@ func TestService_LyricsCachesClientResult(t *testing.T) {
 	}
 }
 
+func TestSyncIntervalIsDaily(t *testing.T) {
+	if SyncInterval != 24*time.Hour {
+		t.Fatalf("sync interval = %s, want 24h", SyncInterval)
+	}
+}
+
 func TestPlainLyricText(t *testing.T) {
 	raw := "[00:01.00]first line\n[00:02.30]second line\n[ti:metadata]\n{\"t\":0,\"c\":[{\"tx\":\"metadata\"}]}"
 	got := plainLyricText(raw)
@@ -119,6 +125,21 @@ func TestPlainLyricTextFromYRC(t *testing.T) {
 	want := "first line\nsecond"
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestHTTPClient_LyricsKeepsTranslation(t *testing.T) {
+	resp := lyricResponse{}
+	resp.LRC.Lyric = "[00:01.00]hello"
+	resp.TLyric.Lyric = "[00:01.00]你好"
+
+	lyrics := lyricsFromResponse(1, resp)
+
+	if lyrics.Translation != "[00:01.00]你好" {
+		t.Fatalf("translation = %q", lyrics.Translation)
+	}
+	if lyrics.Kind != "line" {
+		t.Fatalf("kind = %q, want line", lyrics.Kind)
 	}
 }
 

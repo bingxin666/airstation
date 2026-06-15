@@ -56,7 +56,15 @@ export const RadioButton = () => {
                 await syncPlaybackTrack();
             } catch (error) {
                 console.log(error);
-                setTrackStore({ trackName: e.data, trackArtist: "" });
+                setTrackStore({
+                    trackName: e.data,
+                    trackArtist: "",
+                    trackID: "",
+                    netEaseID: 0,
+                    elapsedMs: 0,
+                    updatedAt: Date.now(),
+                    lyrics: null,
+                });
             }
 
             if (trackStore.isPlay) (() => videoRef?.pause())();

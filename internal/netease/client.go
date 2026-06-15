@@ -195,10 +195,15 @@ func (c *HTTPClient) Lyrics(songID int64, cookie string) (*Lyrics, error) {
 		return nil, fmt.Errorf("netease lyric request failed with code %d", resp.Code)
 	}
 
+	return lyricsFromResponse(songID, resp), nil
+}
+
+func lyricsFromResponse(songID int64, resp lyricResponse) *Lyrics {
 	lyrics := &Lyrics{
-		SongID: songID,
-		YRC:    strings.TrimSpace(resp.YRC.Lyric),
-		LRC:    strings.TrimSpace(resp.LRC.Lyric),
+		SongID:      songID,
+		YRC:         strings.TrimSpace(resp.YRC.Lyric),
+		LRC:         strings.TrimSpace(resp.LRC.Lyric),
+		Translation: strings.TrimSpace(resp.TLyric.Lyric),
 	}
 	lyrics.Text = plainLyricText(firstNonEmpty(lyrics.LRC, lyrics.YRC))
 	switch {
@@ -212,7 +217,7 @@ func (c *HTTPClient) Lyrics(songID int64, cookie string) (*Lyrics, error) {
 		lyrics.Kind = "none"
 	}
 
-	return lyrics, nil
+	return lyrics
 }
 
 func (c *HTTPClient) Account(cookie string) (*Account, error) {
@@ -379,6 +384,9 @@ type lyricResponse struct {
 	YRC struct {
 		Lyric string `json:"lyric"`
 	} `json:"yrc"`
+	TLyric struct {
+		Lyric string `json:"lyric"`
+	} `json:"tlyric"`
 }
 
 type accountResponse struct {
