@@ -84,6 +84,7 @@ func (s *Server) Run() {
 	}
 
 	go s.playbackState.Run()
+	go s.netEaseService.RunAutoSync(nil)
 	s.playbackService.DeleteOldPlaybackHistory()
 
 	s.logger.Info("Server starts on http://localhost:" + s.config.HTTPPort)

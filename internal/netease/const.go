@@ -1,11 +1,14 @@
 package netease
 
+import "time"
+
 const (
 	propPlaylistURL = "netease_playlist_url"
 	propQuality     = "netease_quality"
 	propCookie      = "netease_cookie"
 
 	defaultQuality = QualityStandard
+	SyncInterval   = 24 * time.Minute
 )
 
 var bitrateByQuality = map[Quality]int{

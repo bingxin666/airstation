@@ -1,6 +1,7 @@
 export interface Track {
     id: string;
     name: string;
+    artist: string;
     path: string;
     duration: number;
     bitRate: number;
@@ -8,6 +9,7 @@ export interface Track {
 
 export interface PlaybackState {
     currentTrack: Track | null;
+    currentNetEaseID: number;
     currentTrackElapsed: number;
     isPlaying: boolean;
     updatedAt: number;

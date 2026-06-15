@@ -1,47 +1,28 @@
 import { onMount, Show } from "solid-js";
-import { airstationAPI } from "../api";
 import styles from "./CurrentTrack.module.css";
 import { addEventListener, EVENTS } from "../store/events";
 import { setTrackStore, trackStore } from "../store/track";
 import { addHistory } from "../store/history";
 import { getUnixTime } from "../utils/date";
+import { syncPlaybackTrack } from "../store/playback";
 
 export const CurrentTrack = () => {
     onMount(async () => {
         try {
-            const cs = await airstationAPI.getPlayback();
-            if (cs.isPlaying && cs.currentTrack) {
-                setTrackStore({
-                    trackName: cs.currentTrack.name,
-                    trackID: cs.currentTrack.id,
-                    netEaseID: cs.currentNetEaseID,
-                    elapsedMs: cs.currentTrackElapsed * 1000,
-                    updatedAt: Date.now(),
-                });
-                const lyrics = await airstationAPI.getPlaybackLyrics();
-                setTrackStore("lyrics", lyrics);
-            }
+            await syncPlaybackTrack();
         } catch (error) {
             console.log(error);
         }
 
         addEventListener(EVENTS.newTrack, async (e: MessageEvent<string>) => {
             const unixTime = getUnixTime();
-            setTrackStore("trackName", e.data);
             addHistory({ id: unixTime, playedAt: unixTime, trackName: e.data });
+            setTrackStore("lyrics", null);
             try {
-                const cs = await airstationAPI.getPlayback();
-                setTrackStore({
-                    trackName: cs.currentTrack?.name || e.data,
-                    trackID: cs.currentTrack?.id || "",
-                    netEaseID: cs.currentNetEaseID,
-                    elapsedMs: cs.currentTrackElapsed * 1000,
-                    updatedAt: Date.now(),
-                });
-                const lyrics = await airstationAPI.getPlaybackLyrics();
-                setTrackStore("lyrics", lyrics);
+                await syncPlaybackTrack();
             } catch (error) {
                 console.log(error);
+                setTrackStore({ trackName: e.data, trackArtist: "" });
             }
         });
     });
@@ -58,7 +39,10 @@ export const CurrentTrack = () => {
         <div class={styles.box}>
             <Show when={trackStore.trackName.length > 0} fallback={<OfflineLabel />}>
                 <div onClick={copyToClipboard} class={styles.label}>
-                    {trackStore.trackName}
+                    <span>{trackStore.trackName}</span>
+                    <Show when={trackStore.trackArtist.length > 0}>
+                        <span class={styles.artist}>{trackStore.trackArtist}</span>
+                    </Show>
                 </div>
             </Show>
         </div>

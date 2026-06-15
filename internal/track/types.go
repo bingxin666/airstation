@@ -4,9 +4,20 @@ package track
 type Track struct {
 	ID       string  `json:"id"`       // A unique identifier for the track, typically generated using ULID.
 	Name     string  `json:"name"`     // The name of the audio track.
+	Artist   string  `json:"artist"`   // The artist or artists associated with the track.
 	Path     string  `json:"path"`     // The file path of the audio track.
 	Duration float64 `json:"duration"` // The duration of the audio track in seconds.
 	BitRate  int     `json:"bitRate"`  // The bit rate of the audio track in kilobits per second (kbps).
+}
+
+func (t *Track) DisplayName() string {
+	if t == nil {
+		return ""
+	}
+	if t.Artist == "" {
+		return t.Name
+	}
+	return t.Name + " - " + t.Artist
 }
 
 type Store interface {

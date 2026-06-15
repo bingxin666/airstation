@@ -1,6 +1,7 @@
 export interface Track {
     id: string;
     name: string;
+    artist: string;
     path: string;
     duration: number;
     bitRate: number;

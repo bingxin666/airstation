@@ -15,9 +15,7 @@ import (
 func (s *Server) handleHLSPlaylist(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "audio/mpegurl")
 
-	if s.playbackState.IsPlaying {
-		fmt.Fprint(w, s.playbackState.PlaylistStr)
-	}
+	fmt.Fprint(w, s.playbackState.Playlist())
 }
 
 func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
@@ -96,12 +94,12 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlePlaybackState(w http.ResponseWriter, _ *http.Request) {
-	jsonResponse(w, s.playbackState)
+	jsonResponse(w, s.playbackState.Snapshot())
 }
 
 func (s *Server) handlePausePlayback(w http.ResponseWriter, _ *http.Request) {
 	s.playbackState.Pause()
-	jsonResponse(w, s.playbackState)
+	jsonResponse(w, s.playbackState.Snapshot())
 }
 
 func (s *Server) handlePlayPlayback(w http.ResponseWriter, _ *http.Request) {
@@ -111,7 +109,7 @@ func (s *Server) handlePlayPlayback(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
-	jsonResponse(w, s.playbackState)
+	jsonResponse(w, s.playbackState.Snapshot())
 }
 
 func (s *Server) handlePlaybackHistory(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +152,7 @@ func (s *Server) handleEditNetEaseConfig(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if s.playbackState.IsPlaying {
+	if s.playbackState.Snapshot().IsPlaying {
 		if err := s.playbackState.Reload(); err != nil {
 			s.logger.Debug("Playback reload failed: " + err.Error())
 		}

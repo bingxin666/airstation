@@ -83,6 +83,29 @@ func (s *Service) Load() error {
 	return nil
 }
 
+func (s *Service) RunAutoSync(stop <-chan struct{}) {
+	s.runAutoSync(SyncInterval, stop)
+}
+
+func (s *Service) runAutoSync(interval time.Duration, stop <-chan struct{}) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if s.rawConfig().PlaylistURL == "" {
+				continue
+			}
+			if err := s.Sync(); err != nil {
+				s.log.Warn("NetEase playlist auto-sync failed", slog.String("error", err.Error()))
+			}
+		case <-stop:
+			return
+		}
+	}
+}
+
 func (s *Service) Config() PublicConfig {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()

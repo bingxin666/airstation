@@ -1,6 +1,8 @@
 package netease
 
 import (
+	"strings"
+
 	"github.com/cheatsnake/airstation/internal/station"
 	"github.com/cheatsnake/airstation/internal/track"
 )
@@ -84,20 +86,15 @@ type PlayableTrack struct {
 }
 
 func (s *Song) Track(bitRate int) *track.Track {
-	name := s.Name
+	artist := ""
 	if len(s.Artists) > 0 {
-		name += " - "
-		for i, artist := range s.Artists {
-			if i > 0 {
-				name += ", "
-			}
-			name += artist
-		}
+		artist = strings.Join(s.Artists, ", ")
 	}
 
 	return &track.Track{
 		ID:       songTrackID(s.ID),
-		Name:     name,
+		Name:     s.Name,
+		Artist:   artist,
 		Path:     "",
 		Duration: s.Duration,
 		BitRate:  bitRate,

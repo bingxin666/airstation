@@ -6,7 +6,9 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/cheatsnake/airstation/internal/pkg/ffmpeg"
 	"github.com/cheatsnake/airstation/internal/station"
@@ -47,9 +49,14 @@ type fakeClient struct {
 	lyrics      *Lyrics
 	playlistErr error
 	songURLErr  error
+	mutex       sync.Mutex
+	playlistN   int
 }
 
 func (c *fakeClient) Playlist(id string, cookie string) (*Playlist, error) {
+	c.mutex.Lock()
+	c.playlistN++
+	c.mutex.Unlock()
 	if c.playlistErr != nil {
 		return nil, c.playlistErr
 	}
@@ -75,6 +82,12 @@ func (c *fakeClient) Account(cookie string) (*Account, error) {
 		return &Account{}, nil
 	}
 	return c.account, nil
+}
+
+func (c *fakeClient) playlistCalls() int {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.playlistN
 }
 
 func TestService_LyricsCachesClientResult(t *testing.T) {
@@ -309,6 +322,49 @@ func TestService_EditConfigPersistsAndSyncs(t *testing.T) {
 	if conf.AccountName != "User" {
 		t.Fatalf("account name = %q, want User", conf.AccountName)
 	}
+}
+
+func TestService_RunAutoSyncRefreshesConfiguredPlaylist(t *testing.T) {
+	store := newMemoryStore()
+	store.props[propPlaylistURL] = examplePlaylistURL
+	store.props[propQuality] = string(QualityStandard)
+	client := &fakeClient{
+		playlist: &Playlist{
+			ID:   "5006183200",
+			Name: "Playlist",
+			Tracks: []*Song{
+				{ID: 1, Name: "Song", Duration: 180},
+			},
+		},
+	}
+	service := NewService(store, client, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err := service.Load(); err != nil {
+		t.Fatalf("load service: %v", err)
+	}
+	if client.playlistCalls() != 1 {
+		t.Fatalf("playlist calls after load = %d, want 1", client.playlistCalls())
+	}
+
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		service.runAutoSync(time.Millisecond, stop)
+		close(done)
+	}()
+
+	deadline := time.After(250 * time.Millisecond)
+	for client.playlistCalls() < 2 {
+		select {
+		case <-deadline:
+			close(stop)
+			<-done
+			t.Fatalf("auto-sync did not refresh playlist; calls=%d", client.playlistCalls())
+		default:
+			time.Sleep(time.Millisecond)
+		}
+	}
+	close(stop)
+	<-done
 }
 
 func TestService_RandomPlayableTrackSkipsUnplayable(t *testing.T) {
