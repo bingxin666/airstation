@@ -4,7 +4,7 @@ Airstation allows you to organize your own internet radio station from a NetEase
 
 Logically, the frontend part of the application can be divided into 2 parts. The first is the control panel where the radio station is controlled. The second is a minimalistic radio player for listeners.
 
-The backend is organized simply. Station settings, NetEase playlist settings, and playback history are stored in an [SQLite](https://en.wikipedia.org/wiki/SQLite) database. Audio is pulled from NetEase Cloud Music on demand, processed with [FFmpeg](https://en.wikipedia.org/wiki/FFmpeg), and exposed as [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) for listeners.
+The backend is organized simply. Station settings and NetEase playlist settings are stored in an [SQLite](https://en.wikipedia.org/wiki/SQLite) database. Audio is pulled from NetEase Cloud Music on demand, processed with [FFmpeg](https://en.wikipedia.org/wiki/FFmpeg), and exposed as [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) for listeners.
 
 <img src="./images/tech-stack.png" alt="Technology stack"/>
 
@@ -18,7 +18,6 @@ The backend is organized simply. Station settings, NetEase playlist settings, an
 - Apple Music-like lyrics on the listener page
 - Lyrics fallback order: NetEase word-by-word lyrics, synced scrolling lyrics, plain lyric text
 - Possibility to temporarily stop the radio station
-- Playback history
 - Listener counter
 - Player page customization
 

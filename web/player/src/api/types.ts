@@ -23,12 +23,6 @@ export interface PlaybackLyrics {
     text: string;
 }
 
-export interface PlaybackHistory {
-    id: number;
-    playedAt: number;
-    trackName: string;
-}
-
 export interface StationInfo {
     name: string;
     description: string;

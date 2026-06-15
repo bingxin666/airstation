@@ -45,30 +45,6 @@ func (s *integrationStationStore) DeleteStationProperty(key string) error {
 	return nil
 }
 
-type integrationPlaybackStore struct {
-	history []string
-}
-
-func (s *integrationPlaybackStore) AddPlaybackHistory(_ int64, trackName string) error {
-	s.history = append(s.history, trackName)
-	return nil
-}
-
-func (s *integrationPlaybackStore) RecentPlaybackHistory(limit int) ([]*History, error) {
-	history := make([]*History, 0, min(limit, len(s.history)))
-	for i, trackName := range s.history {
-		if i >= limit {
-			break
-		}
-		history = append(history, &History{TrackName: trackName})
-	}
-	return history, nil
-}
-
-func (s *integrationPlaybackStore) DeleteOldPlaybackHistory() (int64, error) {
-	return 0, nil
-}
-
 func TestIntegration_StatePlayCanGenerateExamplePlaylistStream(t *testing.T) {
 	if os.Getenv("AIRSTATION_NETEASE_INTEGRATION") != "1" {
 		t.Skip("set AIRSTATION_NETEASE_INTEGRATION=1 to call NetEase and FFmpeg")
@@ -83,7 +59,6 @@ func TestIntegration_StatePlayCanGenerateExamplePlaylistStream(t *testing.T) {
 	state := NewState(
 		netEaseService,
 		ffmpeg.NewCLI(),
-		NewService(&integrationPlaybackStore{}),
 		t.TempDir(),
 		log,
 	)

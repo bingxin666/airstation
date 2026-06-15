@@ -35,11 +35,6 @@ var migrations = []Migration{
                     track_id TEXT NOT NULL UNIQUE,
                     FOREIGN KEY (track_id) REFERENCES tracks (id)
                 );`,
-				`CREATE TABLE IF NOT EXISTS playback_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    played_at INTEGER NOT NULL,
-                    track_name TEXT NOT NULL
-                );`,
 				`CREATE TABLE IF NOT EXISTS playlist (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL UNIQUE,
@@ -76,13 +71,29 @@ var migrations = []Migration{
 		Up: func(tx *sql.Tx) error {
 			indexes := []string{
 				`CREATE INDEX IF NOT EXISTS idx_tracks_name ON tracks (name COLLATE NOCASE);`,
-				`CREATE INDEX IF NOT EXISTS idx_playback_history_played_at ON playback_history(played_at);`,
 				`CREATE INDEX IF NOT EXISTS idx_playlist_track_ids ON playlist_track (playlist_id, track_id);`,
 			}
 
 			for _, query := range indexes {
 				if _, err := tx.Exec(query); err != nil {
 					return fmt.Errorf("failed to create index: %w, query: %s", err, query)
+				}
+			}
+			return nil
+		},
+	},
+	{
+		Version: 3,
+		Name:    "drop_playback_history",
+		Up: func(tx *sql.Tx) error {
+			queries := []string{
+				`DROP INDEX IF EXISTS idx_playback_history_played_at;`,
+				`DROP TABLE IF EXISTS playback_history;`,
+			}
+
+			for _, query := range queries {
+				if _, err := tx.Exec(query); err != nil {
+					return fmt.Errorf("failed to execute query: %w, query: %s", err, query)
 				}
 			}
 			return nil

@@ -112,19 +112,6 @@ func (s *Server) handlePlayPlayback(w http.ResponseWriter, _ *http.Request) {
 	jsonResponse(w, s.playbackState.Snapshot())
 }
 
-func (s *Server) handlePlaybackHistory(w http.ResponseWriter, r *http.Request) {
-	queries := r.URL.Query()
-	limit := parseIntQuery(queries, "limit", 50)
-	history, err := s.playbackService.RecentPlaybackHistory(limit)
-	if err != nil {
-		s.logger.Debug(err.Error())
-		jsonBadRequest(w, "Playback history retrieving failed")
-		return
-	}
-
-	jsonResponse(w, history)
-}
-
 func (s *Server) handlePlaybackLyrics(w http.ResponseWriter, _ *http.Request) {
 	lyrics, err := s.playbackState.Lyrics()
 	if err != nil {

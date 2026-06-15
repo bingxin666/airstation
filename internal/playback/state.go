@@ -48,9 +48,8 @@ type State struct {
 	preloadInFlight   bool
 	preloadGeneration int64
 
-	netEaseService  *netease.Service
-	ffmpegCLI       HLSMaker
-	playbackService *Service
+	netEaseService *netease.Service
+	ffmpegCLI      HLSMaker
 
 	log   *slog.Logger
 	mutex sync.Mutex
@@ -64,11 +63,11 @@ type preparedTrack struct {
 }
 
 // NewState creates and initializes a new playback State instance.
-func NewState(ns *netease.Service, ffmpegCLI *ffmpeg.CLI, ps *Service, tmpDir string, log *slog.Logger) *State {
-	return NewStateWithHLSMaker(ns, ffmpegCLI, ps, tmpDir, log)
+func NewState(ns *netease.Service, ffmpegCLI *ffmpeg.CLI, tmpDir string, log *slog.Logger) *State {
+	return NewStateWithHLSMaker(ns, ffmpegCLI, tmpDir, log)
 }
 
-func NewStateWithHLSMaker(ns *netease.Service, hlsMaker HLSMaker, ps *Service, tmpDir string, log *slog.Logger) *State {
+func NewStateWithHLSMaker(ns *netease.Service, hlsMaker HLSMaker, tmpDir string, log *slog.Logger) *State {
 	return &State{
 		CurrentTrack:        nil,
 		CurrentNetEaseID:    0,
@@ -80,9 +79,8 @@ func NewStateWithHLSMaker(ns *netease.Service, hlsMaker HLSMaker, ps *Service, t
 		PlayNotify:     make(chan string),
 		PauseNotify:    make(chan bool),
 
-		netEaseService:  ns,
-		ffmpegCLI:       hlsMaker,
-		playbackService: ps,
+		netEaseService: ns,
+		ffmpegCLI:      hlsMaker,
 
 		refreshCount:    0,
 		playlistDir:     tmpDir,
@@ -123,7 +121,6 @@ func (s *State) Run() {
 
 			s.ensurePreloaded()
 			s.NewTrackNotify <- trackName
-			go s.playbackService.AddPlaybackHistory(trackName)
 			continue
 		}
 
@@ -169,7 +166,6 @@ func (s *State) Play() error {
 	trackName := current.track.DisplayName()
 	s.ensurePreloaded()
 	s.PlayNotify <- trackName
-	go s.playbackService.AddPlaybackHistory(trackName)
 
 	return nil
 }

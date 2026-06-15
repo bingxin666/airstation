@@ -1,5 +1,4 @@
-import { PlaybackHistory, PlaybackLyrics, PlaybackState, ResponseErr, StationInfo } from "./types";
-import { queryParams } from "./utils";
+import { PlaybackLyrics, PlaybackState, ResponseErr, StationInfo } from "./types";
 
 export const API_HOST = "";
 export const API_PREFIX = "/api/v1";
@@ -18,12 +17,6 @@ class AirstationAPI {
     async getPlayback() {
         const url = `${this.url()}/playback`;
         return await this.makeRequest<PlaybackState>(url);
-    }
-
-    async getPlaybackHistory(limit?: number) {
-        let url = `${this.url()}/playback/history`;
-        if (limit) url += `?${queryParams({ limit })}`;
-        return await this.makeRequest<PlaybackHistory[]>(url);
     }
 
     async getPlaybackLyrics() {

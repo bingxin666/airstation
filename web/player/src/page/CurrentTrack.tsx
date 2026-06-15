@@ -2,8 +2,6 @@ import { onMount, Show } from "solid-js";
 import styles from "./CurrentTrack.module.css";
 import { addEventListener, EVENTS } from "../store/events";
 import { setTrackStore, trackStore } from "../store/track";
-import { addHistory } from "../store/history";
-import { getUnixTime } from "../utils/date";
 import { syncPlaybackTrack } from "../store/playback";
 
 export const CurrentTrack = () => {
@@ -15,8 +13,6 @@ export const CurrentTrack = () => {
         }
 
         addEventListener(EVENTS.newTrack, async (e: MessageEvent<string>) => {
-            const unixTime = getUnixTime();
-            addHistory({ id: unixTime, playedAt: unixTime, trackName: e.data });
             setTrackStore("lyrics", null);
             try {
                 await syncPlaybackTrack();

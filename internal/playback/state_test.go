@@ -89,7 +89,7 @@ func TestState_LoadNextTrackUsesPreloadedSegmentsAndMetadata(t *testing.T) {
 	}
 
 	hlsMaker := &stateHLSMaker{}
-	state := NewStateWithHLSMaker(netEaseService, hlsMaker, NewService(&mockStore{}), t.TempDir(), log)
+	state := NewStateWithHLSMaker(netEaseService, hlsMaker, t.TempDir(), log)
 	current := stateTrack(1, "One", "Artist A", "current-seg-", 10)
 	next := stateTrack(2, "Two", "Artist B", "next-seg-", 10)
 	following := stateTrack(3, "Three", "Artist C", "following-seg-", 10)

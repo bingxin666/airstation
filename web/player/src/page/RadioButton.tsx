@@ -3,8 +3,6 @@ import styles from "./RadioButton.module.css";
 import { setTrackStore, trackStore } from "../store/track";
 import { Component, onCleanup, onMount } from "solid-js";
 import { addEventListener, EVENTS } from "../store/events";
-import { getUnixTime } from "../utils/date";
-import { addHistory } from "../store/history";
 import { getCssVariable } from "../utils/document";
 import { getHueFromHex } from "../utils/color";
 import { syncPlaybackTrack } from "../store/playback";
@@ -49,8 +47,6 @@ export const RadioButton = () => {
         });
 
         addEventListener(EVENTS.play, async (e: MessageEvent<string>) => {
-            const unixTime = getUnixTime();
-            addHistory({ id: unixTime, playedAt: unixTime, trackName: e.data });
             setTrackStore("lyrics", null);
             try {
                 await syncPlaybackTrack();

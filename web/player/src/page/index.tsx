@@ -3,7 +3,6 @@ import { CurrentTrack } from "./CurrentTrack";
 import { ListenersCounter } from "./ListenersCounter";
 import { RadioButton } from "./RadioButton";
 import { closeEventSource, initEventSource } from "../store/events";
-import { History } from "./History";
 import styles from "./Page.module.css";
 import { StationInformation } from "./StationInformation";
 import { LyricsStage } from "./LyricsStage";
@@ -20,7 +19,6 @@ export const Page = () => {
     return (
         <div class={styles.page}>
             <div class={styles.header}>
-                <History />
                 <ListenersCounter />
                 <StationInformation />
             </div>
