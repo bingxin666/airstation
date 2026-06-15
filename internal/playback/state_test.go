@@ -74,7 +74,8 @@ func (m *stateHLSMaker) MakeRemoteHLSPlaylist(_ string, _ string, _ string, _ in
 
 func TestState_LoadNextTrackUsesPreloadedSegmentsAndMetadata(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	netEaseService := netease.NewService(newStateStationStore(), &stateNetEaseClient{
+	store := newStateStationStore()
+	netEaseService := netease.NewService(store, &stateNetEaseClient{
 		playlist: &netease.Playlist{
 			ID:   "1",
 			Name: "Playlist",
@@ -104,7 +105,7 @@ func TestState_LoadNextTrackUsesPreloadedSegmentsAndMetadata(t *testing.T) {
 	state.PlaylistStr = state.playlist.Generate(0)
 
 	callsBefore := hlsMaker.calls
-	trackName, err := state.loadNextTrackLocked()
+	trackName, songID, err := state.loadNextTrackLocked()
 	if err != nil {
 		t.Fatalf("load next track: %v", err)
 	}
@@ -118,8 +119,16 @@ func TestState_LoadNextTrackUsesPreloadedSegmentsAndMetadata(t *testing.T) {
 	if state.CurrentNetEaseID != 2 {
 		t.Fatalf("current netease id = %d, want 2", state.CurrentNetEaseID)
 	}
+	if songID != 2 {
+		t.Fatalf("loaded song id = %d, want 2", songID)
+	}
 	if state.nextPrepared == nil || state.nextPrepared.songID != 3 {
 		t.Fatalf("next prepared = %#v, want song 3", state.nextPrepared)
+	}
+	state.recordPlayedSong(songID)
+	recent := recentNetEaseSongIDs(store)
+	if len(recent) != 1 || recent[0] != 2 {
+		t.Fatalf("recent netease song ids = %#v, want [2]", recent)
 	}
 	if hlsMaker.calls != callsBefore {
 		t.Fatalf("loadNextTrackLocked called HLS maker: before=%d after=%d", callsBefore, hlsMaker.calls)
@@ -131,6 +140,42 @@ func TestState_LoadNextTrackUsesPreloadedSegmentsAndMetadata(t *testing.T) {
 	}
 	if !strings.Contains(playlist, "following-seg-0.ts") {
 		t.Fatalf("playlist did not carry following preloaded segments:\n%s", playlist)
+	}
+}
+
+func TestState_PlayRecordsOnlyCurrentSong(t *testing.T) {
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	store := newStateStationStore()
+	netEaseService := netease.NewService(store, &stateNetEaseClient{
+		playlist: &netease.Playlist{
+			ID:   "1",
+			Name: "Playlist",
+			Tracks: []*netease.Song{
+				{ID: 1, Name: "One", Artists: []string{"Artist A"}, Duration: 10},
+				{ID: 2, Name: "Two", Artists: []string{"Artist B"}, Duration: 10},
+			},
+		},
+	}, log)
+	if err := netEaseService.Load(); err != nil {
+		t.Fatalf("load netease service: %v", err)
+	}
+
+	state := NewStateWithHLSMaker(netEaseService, &stateHLSMaker{}, t.TempDir(), log)
+	state.PlayNotify = make(chan string, 1)
+
+	if err := state.Play(); err != nil {
+		t.Fatalf("play: %v", err)
+	}
+
+	recent := recentNetEaseSongIDs(store)
+	if len(recent) != 1 || recent[0] != state.CurrentNetEaseID {
+		t.Fatalf("recent netease song ids = %#v, want current song %d only", recent, state.CurrentNetEaseID)
+	}
+	if state.nextPrepared == nil {
+		t.Fatal("next track was not prepared")
+	}
+	if state.nextPrepared.songID == state.CurrentNetEaseID {
+		t.Fatalf("next prepared song duplicates current song %d", state.CurrentNetEaseID)
 	}
 }
 
@@ -149,4 +194,26 @@ func stateSegments(prefix string, duration float64) []*hls.Segment {
 		{Duration: duration / 2, Path: prefix + "0.ts", IsFirst: true},
 		{Duration: duration / 2, Path: prefix + "1.ts"},
 	}
+}
+
+func recentNetEaseSongIDs(store *stateStationStore) []int64 {
+	raw := store.props["netease_recent_song_ids"]
+	if raw == "" {
+		return nil
+	}
+
+	trimmed := strings.Trim(raw, "[]")
+	if trimmed == "" {
+		return nil
+	}
+
+	parts := strings.Split(trimmed, ",")
+	ids := make([]int64, 0, len(parts))
+	for _, part := range parts {
+		id, err := strconv.ParseInt(strings.TrimSpace(part), 10, 64)
+		if err == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }

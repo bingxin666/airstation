@@ -28,6 +28,7 @@ The following describes how streaming works. The station owner configures a NetE
 <img src="./images/audio-pipeline.png" alt="Audio pipeline"/>
 
 - When playback starts, the backend randomly chooses a playable song from the synced NetEase playlist.
+- The backend keeps only an internal list of the 50 most recently played NetEase songs and excludes them from random selection.
 - The backend asks NetEase for a playable audio URL at the configured quality. Songs without a playable URL are skipped.
 - FFmpeg reads the remote audio URL and generates temporary HLS segments in the server's tmp directory.
 - For the current song, the backend also fetches NetEase lyrics and exposes the raw word-by-word and line-synced lyric data to the player.

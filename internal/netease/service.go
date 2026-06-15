@@ -1,6 +1,7 @@
 package netease
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -17,15 +18,16 @@ type Service struct {
 	client Client
 	log    *slog.Logger
 
-	mutex        sync.RWMutex
-	config       Config
-	playlistID   string
-	playlistName string
-	tracks       []*Song
-	lyricsCache  map[int64]*Lyrics
-	accountName  string
-	lastError    string
-	lastSyncedAt int64
+	mutex         sync.RWMutex
+	config        Config
+	playlistID    string
+	playlistName  string
+	tracks        []*Song
+	recentSongIDs []int64
+	lyricsCache   map[int64]*Lyrics
+	accountName   string
+	lastError     string
+	lastSyncedAt  int64
 }
 
 func NewService(store Store, client Client, log *slog.Logger) *Service {
@@ -53,6 +55,7 @@ func (s *Service) Load() error {
 	conf := Config{
 		Quality: defaultQuality,
 	}
+	var recentSongIDs []int64
 	for _, prop := range props {
 		switch prop.Key {
 		case propPlaylistURL:
@@ -61,6 +64,8 @@ func (s *Service) Load() error {
 			conf.Quality = Quality(prop.Value)
 		case propCookie:
 			conf.Cookie = prop.Value
+		case propRecentSongIDs:
+			recentSongIDs = recentSongIDsFromJSON(prop.Value)
 		}
 	}
 
@@ -70,6 +75,7 @@ func (s *Service) Load() error {
 
 	s.mutex.Lock()
 	s.config = conf
+	s.recentSongIDs = recentSongIDs
 	s.mutex.Unlock()
 
 	if conf.Cookie != "" {
@@ -218,7 +224,11 @@ func (s *Service) Sync() error {
 	return nil
 }
 
-func (s *Service) RandomPlayableTrack() (*PlayableTrack, error) {
+func (s *Service) RandomPlayableTrack(excludeSongIDs ...int64) (*PlayableTrack, error) {
+	return s.RandomPlayableTrackAfter(nil, excludeSongIDs...)
+}
+
+func (s *Service) RandomPlayableTrackAfter(recentlyPlayedSongIDs []int64, excludeSongIDs ...int64) (*PlayableTrack, error) {
 	if len(s.snapshotTracks()) == 0 {
 		if err := s.Sync(); err != nil {
 			return nil, err
@@ -231,10 +241,33 @@ func (s *Service) RandomPlayableTrack() (*PlayableTrack, error) {
 		return nil, errors.New("netease playlist has no tracks")
 	}
 
-	start := rand.IntN(len(tracks))
+	excluded := songIDSet(s.recentSongIDsAfter(recentlyPlayedSongIDs))
+	for _, id := range excludeSongIDs {
+		if id > 0 {
+			excluded[id] = struct{}{}
+		}
+	}
+
+	candidates := make([]*Song, 0, len(tracks))
+	for _, song := range tracks {
+		if song == nil {
+			continue
+		}
+		if _, ok := excluded[song.ID]; ok {
+			continue
+		}
+		candidates = append(candidates, song)
+	}
+	if len(candidates) == 0 {
+		err := errors.New("netease playlist has no tracks outside the recent playback list")
+		s.setLastError(err)
+		return nil, err
+	}
+
+	start := rand.IntN(len(candidates))
 	var lastErr error
-	for i := 0; i < len(tracks); i++ {
-		song := tracks[(start+i)%len(tracks)]
+	for i := 0; i < len(candidates); i++ {
+		song := candidates[(start+i)%len(candidates)]
 		source, err := s.client.SongURL(song.ID, conf.Quality, conf.Cookie)
 		if err != nil {
 			lastErr = err
@@ -257,6 +290,36 @@ func (s *Service) RandomPlayableTrack() (*PlayableTrack, error) {
 	}
 	s.setLastError(lastErr)
 	return nil, lastErr
+}
+
+func (s *Service) recentSongIDsAfter(songIDs []int64) []int64 {
+	recent := s.snapshotRecentSongIDs()
+	for _, id := range songIDs {
+		if id <= 0 {
+			continue
+		}
+		recent = trimRecentSongIDs(append([]int64{id}, recent...))
+	}
+	return recent
+}
+
+func (s *Service) RecordPlayedSong(songID int64) error {
+	if songID <= 0 {
+		return nil
+	}
+
+	s.mutex.Lock()
+	recent := append([]int64{songID}, s.recentSongIDs...)
+	recent = trimRecentSongIDs(recent)
+	s.recentSongIDs = recent
+	s.mutex.Unlock()
+
+	raw, err := json.Marshal(recent)
+	if err != nil {
+		return err
+	}
+	_, err = s.store.UpsertStationProperty(propRecentSongIDs, string(raw))
+	return err
 }
 
 func (s *Service) Lyrics(songID int64) (*Lyrics, error) {
@@ -299,6 +362,15 @@ func (s *Service) snapshotTracks() []*Song {
 	return tracks
 }
 
+func (s *Service) snapshotRecentSongIDs() []int64 {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	ids := make([]int64, len(s.recentSongIDs))
+	copy(ids, s.recentSongIDs)
+	return ids
+}
+
 func (s *Service) refreshAccount(cookie string) {
 	account, err := s.client.Account(cookie)
 	if err != nil {
@@ -332,6 +404,45 @@ func bitrateForQuality(q Quality) int {
 
 func songTrackID(id int64) string {
 	return "netease-" + strconv.FormatInt(id, 10)
+}
+
+func recentSongIDsFromJSON(raw string) []int64 {
+	if raw == "" {
+		return nil
+	}
+
+	var ids []int64
+	if err := json.Unmarshal([]byte(raw), &ids); err != nil {
+		return nil
+	}
+	return trimRecentSongIDs(ids)
+}
+
+func trimRecentSongIDs(ids []int64) []int64 {
+	recent := make([]int64, 0, min(len(ids), maxRecentSongCount))
+	seen := map[int64]struct{}{}
+	for _, id := range ids {
+		if id <= 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		recent = append(recent, id)
+		if len(recent) == maxRecentSongCount {
+			break
+		}
+	}
+	return recent
+}
+
+func songIDSet(ids []int64) map[int64]struct{} {
+	set := make(map[int64]struct{}, len(ids))
+	for _, id := range ids {
+		set[id] = struct{}{}
+	}
+	return set
 }
 
 var playlistIDPattern = regexp.MustCompile(`(?:playlist[/#?].*?id=|playlist\?id=|[?&]id=)(\d+)`)

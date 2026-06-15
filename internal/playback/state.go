@@ -106,7 +106,7 @@ func (s *State) Run() {
 		s.refreshCount++
 
 		if s.CurrentTrackElapsed >= s.CurrentTrack.Duration {
-			trackName, err := s.loadNextTrackLocked()
+			trackName, songID, err := s.loadNextTrackLocked()
 			if err != nil {
 				s.log.Error(err.Error())
 				s.pauseLocked()
@@ -119,6 +119,7 @@ func (s *State) Run() {
 			s.UpdatedAt = time.Now().Unix()
 			s.mutex.Unlock()
 
+			s.recordPlayedSong(songID)
 			s.ensurePreloaded()
 			s.NewTrackNotify <- trackName
 			continue
@@ -132,7 +133,7 @@ func (s *State) Run() {
 
 // Play starts playback by loading the current and next tracks into the HLS playlist.
 func (s *State) Play() error {
-	current, err := s.prepareRandomTrack()
+	current, err := s.prepareRandomTrackAfter(nil)
 	if err != nil {
 		return err
 	}
@@ -140,7 +141,7 @@ func (s *State) Play() error {
 		return errors.New("netease playlist returned no playable current track")
 	}
 
-	next, err := s.prepareRandomTrack()
+	next, err := s.prepareRandomTrackAfter([]int64{current.songID}, current.songID)
 	if err != nil {
 		return err
 	}
@@ -163,6 +164,7 @@ func (s *State) Play() error {
 	s.IsPlaying = true
 	s.mutex.Unlock()
 
+	s.recordPlayedSong(current.songID)
 	trackName := current.track.DisplayName()
 	s.ensurePreloaded()
 	s.PlayNotify <- trackName
@@ -212,9 +214,9 @@ func (s *State) Reload() error {
 }
 
 // loadNextTrack advances the queue, resets elapsed time, and updates playlist with next segments.
-func (s *State) loadNextTrackLocked() (string, error) {
+func (s *State) loadNextTrackLocked() (string, int64, error) {
 	if s.nextPrepared == nil || s.nextPrepared.track == nil || len(s.nextPrepared.segments) == 0 {
-		return "", errors.New("next netease track is not prepared")
+		return "", 0, errors.New("next netease track is not prepared")
 	}
 
 	s.CurrentTrackElapsed = 0
@@ -230,7 +232,7 @@ func (s *State) loadNextTrackLocked() (string, error) {
 	}
 	s.playlist.Next(nextSegments)
 
-	return current.track.DisplayName(), nil
+	return current.track.DisplayName(), current.songID, nil
 }
 
 func (s *State) ensurePreloaded() {
@@ -253,7 +255,8 @@ func (s *State) ensurePreloaded() {
 	s.mutex.Unlock()
 
 	go func() {
-		next, err := s.prepareRandomTrack()
+		recentlyPlayedSongIDs, excludeSongIDs := s.preloadSelectionContext()
+		next, err := s.prepareRandomTrackAfter(recentlyPlayedSongIDs, excludeSongIDs...)
 
 		s.mutex.Lock()
 		needsMorePreload := false
@@ -284,8 +287,8 @@ func (s *State) ensurePreloaded() {
 	}()
 }
 
-func (s *State) prepareRandomTrack() (*preparedTrack, error) {
-	source, err := s.netEaseService.RandomPlayableTrack()
+func (s *State) prepareRandomTrackAfter(recentlyPlayedSongIDs []int64, excludeSongIDs ...int64) (*preparedTrack, error) {
+	source, err := s.netEaseService.RandomPlayableTrackAfter(recentlyPlayedSongIDs, excludeSongIDs...)
 	if err != nil {
 		return nil, err
 	}
@@ -307,6 +310,33 @@ func (s *State) prepareRandomTrack() (*preparedTrack, error) {
 		url:      source.URL,
 		segments: segments,
 	}, nil
+}
+
+func (s *State) preloadSelectionContext() ([]int64, []int64) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	recentlyPlayedSongIDs := make([]int64, 0, 3)
+	excludeSongIDs := make([]int64, 0, 3)
+	if s.CurrentNetEaseID > 0 {
+		recentlyPlayedSongIDs = append(recentlyPlayedSongIDs, s.CurrentNetEaseID)
+		excludeSongIDs = append(excludeSongIDs, s.CurrentNetEaseID)
+	}
+	if s.nextPrepared != nil && s.nextPrepared.songID > 0 {
+		recentlyPlayedSongIDs = append(recentlyPlayedSongIDs, s.nextPrepared.songID)
+		excludeSongIDs = append(excludeSongIDs, s.nextPrepared.songID)
+	}
+	if s.followingPrepared != nil && s.followingPrepared.songID > 0 {
+		recentlyPlayedSongIDs = append(recentlyPlayedSongIDs, s.followingPrepared.songID)
+		excludeSongIDs = append(excludeSongIDs, s.followingPrepared.songID)
+	}
+	return recentlyPlayedSongIDs, excludeSongIDs
+}
+
+func (s *State) recordPlayedSong(songID int64) {
+	if err := s.netEaseService.RecordPlayedSong(songID); err != nil {
+		s.log.Warn("Failed to record recent NetEase song", slog.String("error", err.Error()))
+	}
 }
 
 // makeHLSSegments generates HLS segments for a given track.

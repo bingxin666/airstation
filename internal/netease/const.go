@@ -3,9 +3,11 @@ package netease
 import "time"
 
 const (
-	propPlaylistURL = "netease_playlist_url"
-	propQuality     = "netease_quality"
-	propCookie      = "netease_cookie"
+	propPlaylistURL    = "netease_playlist_url"
+	propQuality        = "netease_quality"
+	propCookie         = "netease_cookie"
+	propRecentSongIDs  = "netease_recent_song_ids"
+	maxRecentSongCount = 50
 
 	defaultQuality = QualityStandard
 	SyncInterval   = 24 * time.Hour

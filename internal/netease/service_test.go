@@ -1,11 +1,13 @@
 package netease
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -88,6 +90,44 @@ func (c *fakeClient) playlistCalls() int {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.playlistN
+}
+
+func TestService_RecordPlayedSongKeepsRecentFifty(t *testing.T) {
+	store := newMemoryStore()
+	service := NewService(store, &fakeClient{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	for id := int64(1); id <= 55; id++ {
+		if err := service.RecordPlayedSong(id); err != nil {
+			t.Fatalf("record song %d: %v", id, err)
+		}
+	}
+
+	recent := recentSongIDsFromJSON(store.props[propRecentSongIDs])
+	if len(recent) != maxRecentSongCount {
+		t.Fatalf("recent song count = %d, want %d", len(recent), maxRecentSongCount)
+	}
+	if recent[0] != 55 {
+		t.Fatalf("newest recent song = %d, want 55", recent[0])
+	}
+	if recent[len(recent)-1] != 6 {
+		t.Fatalf("oldest recent song = %d, want 6", recent[len(recent)-1])
+	}
+
+	if err := service.RecordPlayedSong(42); err != nil {
+		t.Fatalf("record duplicate song: %v", err)
+	}
+	recent = recentSongIDsFromJSON(store.props[propRecentSongIDs])
+	if recent[0] != 42 {
+		t.Fatalf("replayed song was not moved to front: %#v", recent[:3])
+	}
+
+	seen := map[int64]struct{}{}
+	for _, id := range recent {
+		if _, ok := seen[id]; ok {
+			t.Fatalf("recent song %d appears more than once in %#v", id, recent)
+		}
+		seen[id] = struct{}{}
+	}
 }
 
 func TestService_LyricsCachesClientResult(t *testing.T) {
@@ -411,4 +451,77 @@ func TestService_RandomPlayableTrackSkipsUnplayable(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
+}
+
+func TestService_RandomPlayableTrackSkipsRecentAndExcludedSongs(t *testing.T) {
+	store := newMemoryStore()
+	store.props[propPlaylistURL] = "3778678"
+	store.props[propQuality] = string(QualityStandard)
+	store.props[propRecentSongIDs] = mustSongIDsJSON(t, songIDRange(1, 50))
+	client := &fakeClient{
+		playlist: &Playlist{
+			ID:     "3778678",
+			Name:   "Playlist",
+			Tracks: songRange(1, 51),
+		},
+		songURL: &SongURL{
+			URL:     "https://example.test/song.mp3",
+			BitRate: 128,
+		},
+	}
+	service := NewService(store, client, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err := service.Load(); err != nil {
+		t.Fatalf("unexpected load error: %v", err)
+	}
+
+	got, err := service.RandomPlayableTrack()
+	if err != nil {
+		t.Fatalf("random playable track: %v", err)
+	}
+	if got.SongID != 51 {
+		t.Fatalf("song id = %d, want 51", got.SongID)
+	}
+
+	got, err = service.RandomPlayableTrackAfter([]int64{51})
+	if err != nil {
+		t.Fatalf("random playable track after current song: %v", err)
+	}
+	if got.SongID != 50 {
+		t.Fatalf("song id after current song = %d, want 50", got.SongID)
+	}
+
+	got, err = service.RandomPlayableTrack(51)
+	if err == nil {
+		t.Fatalf("expected no candidate after excluding the only non-recent song, got %d", got.SongID)
+	}
+}
+
+func mustSongIDsJSON(t *testing.T, ids []int64) string {
+	t.Helper()
+
+	raw, err := json.Marshal(ids)
+	if err != nil {
+		t.Fatalf("marshal song ids: %v", err)
+	}
+	return string(raw)
+}
+
+func songIDRange(start, end int64) []int64 {
+	ids := make([]int64, 0, end-start+1)
+	for id := start; id <= end; id++ {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func songRange(start, end int64) []*Song {
+	songs := make([]*Song, 0, end-start+1)
+	for id := start; id <= end; id++ {
+		songs = append(songs, &Song{
+			ID:       id,
+			Name:     "Song " + strconv.FormatInt(id, 10),
+			Duration: 180,
+		})
+	}
+	return songs
 }
