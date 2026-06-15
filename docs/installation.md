@@ -54,6 +54,8 @@ After logging into the control panel, open the NetEase Cloud source section and 
 
 The server keeps these values in SQLite and automatically builds the public HLS stream from random playable songs in that playlist.
 When lyrics are available, the player prefers NetEase word-by-word lyrics, then synced scrolling lyrics, then plain lyric text.
+For overseas deployments, Airstation sends NetEase API requests with a mainland `X-Real-IP` header by default and rewrites NetEase audio CDN links from `m*.music.126.net` to `m*c.music.126.net`, matching the lightweight browser-extension unlock approach used by NetEaseMusicWorld++.
+Set `AIRSTATION_NETEASE_REAL_IP` to another mainland IP if needed, or set it to `off` to disable the header.
 
 To stop the container, just type:
 

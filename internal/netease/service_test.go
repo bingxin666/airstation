@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -180,6 +182,47 @@ func TestHTTPClient_LyricsKeepsTranslation(t *testing.T) {
 	}
 	if lyrics.Kind != "line" {
 		t.Fatalf("kind = %q, want line", lyrics.Kind)
+	}
+}
+
+func TestHTTPClient_SendsRealIPHeader(t *testing.T) {
+	var gotRealIP string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotRealIP = r.Header.Get("X-Real-IP")
+		_, _ = w.Write([]byte(`{"code":200,"data":[{"url":"https://m7.music.126.net/song.mp3","br":128000,"code":200}]}`))
+	}))
+	defer server.Close()
+
+	client := NewHTTPClient(WithRealIP("118.88.88.88"))
+	var resp songURLResponse
+	if err := client.getJSON(server.URL, "", &resp); err != nil {
+		t.Fatalf("get json: %v", err)
+	}
+	if gotRealIP != "118.88.88.88" {
+		t.Fatalf("X-Real-IP = %q, want 118.88.88.88", gotRealIP)
+	}
+}
+
+func TestUnlockedAudioURLUsesCdnHost(t *testing.T) {
+	got := unlockedAudioURL("https://m7.music.126.net/20240615/song.mp3?auth=token")
+	want := "https://m7c.music.126.net/20240615/song.mp3?auth=token"
+	if got != want {
+		t.Fatalf("unlocked url = %q, want %q", got, want)
+	}
+
+	got = unlockedAudioURL("https://m7c.music.126.net/20240615/song.mp3")
+	want = "https://m7c.music.126.net/20240615/song.mp3"
+	if got != want {
+		t.Fatalf("already unlocked url = %q, want %q", got, want)
+	}
+}
+
+func TestNormalizeRealIPCanDisableHeader(t *testing.T) {
+	if got := normalizedRealIP(""); got != defaultRealIP {
+		t.Fatalf("empty real ip = %q, want default %q", got, defaultRealIP)
+	}
+	if got := normalizedRealIP("off"); got != "" {
+		t.Fatalf("disabled real ip = %q, want empty", got)
 	}
 }
 

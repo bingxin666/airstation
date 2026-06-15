@@ -76,7 +76,7 @@ func (cli *CLI) MakeRemoteHLSPlaylist(trackURL, outDir, segName string, segDurat
 	cmd := exec.Command(
 		ffmpegBin,
 		"-user_agent", "Mozilla/5.0 (compatible; Airstation/1.0)",
-		"-headers", "Referer: https://music.163.com\r\n",
+		"-headers", "Referer: https://music.163.com\r\nCache-Control: no-cache\r\n",
 		"-i", trackURL,
 		"-vn",
 		"-c:a", "aac",

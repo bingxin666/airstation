@@ -12,30 +12,32 @@ import (
 const minSecretLength = 10
 
 type Config struct {
-	DBDir        string
-	DBFile       string
-	TmpDir       string
-	PlayerDir    string
-	StudioDir    string
-	HTTPPort     string
-	JWTSign      string
-	SecretKey    string
-	SecureCookie bool
+	DBDir         string
+	DBFile        string
+	TmpDir        string
+	PlayerDir     string
+	StudioDir     string
+	HTTPPort      string
+	JWTSign       string
+	SecretKey     string
+	SecureCookie  bool
+	NetEaseRealIP string
 }
 
 func Load() *Config {
 	_ = godotenv.Load() // For development
 
 	return &Config{
-		DBDir:        getEnv("AIRSTATION_DB_DIR", filepath.Join("storage")),
-		DBFile:       getEnv("AIRSTATION_DB_FILE", "storage.db"),
-		TmpDir:       getEnv("AIRSTATION_TMP_DIR", filepath.Join("static", "tmp")),
-		PlayerDir:    getEnv("AIRSTATION_PLAYER_DIR", filepath.Join("web", "player", "dist")),
-		StudioDir:    getEnv("AIRSTATION_STUDIO_DIR", filepath.Join("web", "studio", "dist")),
-		HTTPPort:     getEnv("AIRSTATION_HTTP_PORT", "7331"),
-		JWTSign:      getSecret("AIRSTATION_JWT_SIGN"),
-		SecretKey:    getSecret("AIRSTATION_SECRET_KEY"),
-		SecureCookie: getEnvBool("AIRSTATION_SECURE_COOKIE", false),
+		DBDir:         getEnv("AIRSTATION_DB_DIR", filepath.Join("storage")),
+		DBFile:        getEnv("AIRSTATION_DB_FILE", "storage.db"),
+		TmpDir:        getEnv("AIRSTATION_TMP_DIR", filepath.Join("static", "tmp")),
+		PlayerDir:     getEnv("AIRSTATION_PLAYER_DIR", filepath.Join("web", "player", "dist")),
+		StudioDir:     getEnv("AIRSTATION_STUDIO_DIR", filepath.Join("web", "studio", "dist")),
+		HTTPPort:      getEnv("AIRSTATION_HTTP_PORT", "7331"),
+		JWTSign:       getSecret("AIRSTATION_JWT_SIGN"),
+		SecretKey:     getSecret("AIRSTATION_SECRET_KEY"),
+		SecureCookie:  getEnvBool("AIRSTATION_SECURE_COOKIE", false),
+		NetEaseRealIP: getEnv("AIRSTATION_NETEASE_REAL_IP", ""),
 	}
 }
 

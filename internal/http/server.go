@@ -31,7 +31,8 @@ type Server struct {
 func NewServer(store storage.Storage, conf *config.Config, logger *slog.Logger) *Server {
 	ffmpegCLI := ffmpeg.NewCLI()
 	ss := station.NewService(store)
-	ns := netease.NewService(store, nil, logger.WithGroup("netease"))
+	netEaseClient := netease.NewHTTPClient(netease.WithRealIP(conf.NetEaseRealIP))
+	ns := netease.NewService(store, netEaseClient, logger.WithGroup("netease"))
 	state := playback.NewState(ns, ffmpegCLI, conf.TmpDir, logger.WithGroup("playback"))
 
 	return &Server{

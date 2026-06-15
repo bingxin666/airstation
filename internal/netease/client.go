@@ -3,6 +3,7 @@ package netease
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -15,14 +16,28 @@ const neteaseBaseURL = "https://music.163.com"
 
 type HTTPClient struct {
 	client *http.Client
+	realIP string
 }
 
-func NewHTTPClient() *HTTPClient {
-	return &HTTPClient{
+type HTTPClientOption func(*HTTPClient)
+
+func WithRealIP(realIP string) HTTPClientOption {
+	return func(c *HTTPClient) {
+		c.realIP = normalizedRealIP(realIP)
+	}
+}
+
+func NewHTTPClient(options ...HTTPClientOption) *HTTPClient {
+	client := &HTTPClient{
 		client: &http.Client{
 			Timeout: 25 * time.Second,
 		},
+		realIP: defaultRealIP,
 	}
+	for _, option := range options {
+		option(client)
+	}
+	return client
 }
 
 func (c *HTTPClient) Playlist(id string, cookie string) (*Playlist, error) {
@@ -167,7 +182,7 @@ func (c *HTTPClient) SongURL(songID int64, quality Quality, cookie string) (*Son
 	}
 
 	return &SongURL{
-		URL:     data.URL,
+		URL:     unlockedAudioURL(data.URL),
 		BitRate: max(data.BR/1000, bitrateForQuality(quality)/1000),
 	}, nil
 }
@@ -245,6 +260,9 @@ func (c *HTTPClient) getJSON(endpoint, cookie string, target any) error {
 	req.Header.Set("Accept", "application/json, text/plain, */*")
 	req.Header.Set("Referer", neteaseBaseURL)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; Airstation/1.0)")
+	if c.realIP != "" {
+		req.Header.Set("X-Real-IP", c.realIP)
+	}
 	if cookie != "" {
 		req.Header.Set("Cookie", cookie)
 	}
@@ -400,6 +418,7 @@ var (
 	lrcTimestampPattern     = regexp.MustCompile(`\[[0-9]{1,2}:[0-9]{2}(?:\.[0-9]{1,3})?\]`)
 	yrcLineTimestampPattern = regexp.MustCompile(`\[[0-9]+,[0-9]+\]`)
 	yrcWordTimestampPattern = regexp.MustCompile(`\([0-9]+,[0-9]+,[0-9]+\)`)
+	neteaseAudioHostPattern = regexp.MustCompile(`^(m\d+?)(?:c)?\.music\.126\.net$`)
 )
 
 func plainLyricText(raw string) string {
@@ -425,4 +444,41 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func normalizedRealIP(realIP string) string {
+	realIP = strings.TrimSpace(realIP)
+	if realIP == "" {
+		return defaultRealIP
+	}
+	switch strings.ToLower(realIP) {
+	case "0", "false", "no", "off", "none", "disable", "disabled":
+		return ""
+	default:
+		if net.ParseIP(realIP) == nil {
+			return defaultRealIP
+		}
+		return realIP
+	}
+}
+
+func unlockedAudioURL(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err == nil && parsed.Hostname() != "" {
+		host := unlockedAudioHost(parsed.Hostname())
+		if host != parsed.Hostname() {
+			if port := parsed.Port(); port != "" {
+				parsed.Host = net.JoinHostPort(host, port)
+			} else {
+				parsed.Host = host
+			}
+			return parsed.String()
+		}
+	}
+
+	return neteaseAudioHostPattern.ReplaceAllString(rawURL, `${1}c.music.126.net`)
+}
+
+func unlockedAudioHost(host string) string {
+	return neteaseAudioHostPattern.ReplaceAllString(host, `${1}c.music.126.net`)
 }

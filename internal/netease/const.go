@@ -9,6 +9,8 @@ const (
 	propRecentSongIDs  = "netease_recent_song_ids"
 	maxRecentSongCount = 50
 
+	defaultRealIP = "211.161.244.70"
+
 	defaultQuality = QualityStandard
 	SyncInterval   = 24 * time.Hour
 )
