@@ -14,7 +14,6 @@ import { FC, useEffect, useRef, useState } from "react";
 import { airstationAPI, API_HOST } from "../api";
 import { usePlaybackStore } from "../store/playback";
 import { formatTime } from "../utils/time";
-import { useTrackQueueStore } from "../store/track-queue";
 import { IconHeadphones, IconPlayerPlayFilled, IconPlayerStopFilled, IconVolumeOff, IconVolumeOn } from "../icons";
 import { useDisclosure } from "@mantine/hooks";
 import { errNotify } from "../notifications";
@@ -32,7 +31,6 @@ export const Playback: FC<{ isMobile?: boolean }> = (props) => {
     const setPlayback = usePlaybackStore((s) => s.setPlayback);
     const fetchPlayback = usePlaybackStore((s) => s.fetchPlayback);
     const syncElapsedTime = usePlaybackStore((s) => s.syncElapsedTime);
-    const rotateQueue = useTrackQueueStore((s) => s.rotateQueue);
     const addEventHandler = useEventSourceStore((s) => s.addEventHandler);
     const theme = useMantineTheme();
 
@@ -42,7 +40,6 @@ export const Playback: FC<{ isMobile?: boolean }> = (props) => {
         })();
 
         addEventHandler(EVENTS.newTrack, async () => {
-            rotateQueue();
             await fetchPlayback();
         });
 

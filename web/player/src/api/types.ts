@@ -8,8 +8,17 @@ export interface Track {
 
 export interface PlaybackState {
     currentTrack: Track | null;
+    currentNetEaseID: number;
     currentTrackElapsed: number;
     isPlaying: boolean;
+}
+
+export interface PlaybackLyrics {
+    songID: number;
+    kind: "word" | "line" | "text" | "none";
+    yrc: string;
+    lrc: string;
+    text: string;
 }
 
 export interface PlaybackHistory {

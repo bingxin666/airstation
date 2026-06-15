@@ -7,6 +7,7 @@ import { getUnixTime } from "../utils/date";
 import { addHistory } from "../store/history";
 import { getCssVariable } from "../utils/document";
 import { getHueFromHex } from "../utils/color";
+import { airstationAPI } from "../api";
 
 const STREAM_SOURCE = "/stream";
 
@@ -35,14 +36,35 @@ export const RadioButton = () => {
 
     onMount(() => {
         addEventListener(EVENTS.pause, (_e: MessageEvent<string>) => {
-            setTrackStore("trackName", "");
+            setTrackStore({
+                trackName: "",
+                trackID: "",
+                netEaseID: 0,
+                elapsedMs: 0,
+                updatedAt: Date.now(),
+                lyrics: null,
+            });
             (() => videoRef?.pause())();
         });
 
-        addEventListener(EVENTS.play, (e: MessageEvent<string>) => {
+        addEventListener(EVENTS.play, async (e: MessageEvent<string>) => {
             const unixTime = getUnixTime();
             setTrackStore("trackName", e.data);
             addHistory({ id: unixTime, playedAt: unixTime, trackName: e.data });
+            try {
+                const cs = await airstationAPI.getPlayback();
+                setTrackStore({
+                    trackName: cs.currentTrack?.name || e.data,
+                    trackID: cs.currentTrack?.id || "",
+                    netEaseID: cs.currentNetEaseID,
+                    elapsedMs: cs.currentTrackElapsed * 1000,
+                    updatedAt: Date.now(),
+                });
+                const lyrics = await airstationAPI.getPlaybackLyrics();
+                setTrackStore("lyrics", lyrics);
+            } catch (error) {
+                console.log(error);
+            }
 
             if (trackStore.isPlay) (() => videoRef?.pause())();
             (() => videoRef?.play())();

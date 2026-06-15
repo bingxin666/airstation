@@ -1,0 +1,47 @@
+.stage {
+    width: min(92vw, 820px);
+    height: clamp(220px, 42vh, 430px);
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+}
+
+.amllHost {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--bg-gradient-start) 28%, transparent);
+    backdrop-filter: blur(14px);
+}
+
+.textFallback {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    padding: clamp(1rem, 3vw, 2rem);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--bg-gradient-start) 28%, transparent);
+    backdrop-filter: blur(14px);
+    white-space: pre-wrap;
+    line-height: 1.7;
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    text-align: center;
+}
+
+.empty {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dimmed-color);
+    user-select: none;
+}
+
+:global(.amll-lyric-player) {
+    --amll-lp-color: var(--text-color);
+    --amll-lp-bg-color: transparent;
+    --amll-lp-font-size: clamp(24px, 4vw, 42px);
+    --amll-lp-current-line-font-size: clamp(30px, 5vw, 54px);
+}

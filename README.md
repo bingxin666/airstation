@@ -16,7 +16,7 @@
 </p>
 <br />
 
-Airstation is a self-hosted web app for streaming music over the Internet. It features a simple interface for uploading tracks and managing the playback queue, along with a minimalistic player for listeners. Under the hood, it streams music over HTTP using HLS, stores data in SQLite, and leverages FFmpeg for audio processing — all packaged in a compact Docker container for easy deployment.
+Airstation is a self-hosted web app for streaming a NetEase Cloud Music playlist over the Internet. The studio lets you paste a NetEase playlist link, choose the requested audio quality, and provide an optional login cookie for account-only content. The backend randomly pulls playable songs from that playlist, transcodes them with FFmpeg, and publishes one continuous HLS stream for listeners. The listener page also shows Apple Music-like lyrics, preferring NetEase word-by-word lyrics and falling back to synced scrolling lines or plain lyric text.
 
 <img src="./docs/images/screenshot01.png" alt="Web studio screenshot"/>
 <img src="./docs/images/screenshot02.png" alt="Web studio mobile screenshot"/>
@@ -24,4 +24,4 @@ Airstation is a self-hosted web app for streaming music over the Internet. It fe
 
 <p></p>
 <div align="center">Made for fun</div>
-<div align="center"><a href="./LICENSE">LICENSE</a> 2025 - Present</div
+<div align="center"><a href="./LICENSE">LICENSE</a> 2025 - Present</div>

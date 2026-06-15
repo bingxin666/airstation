@@ -1,9 +1,8 @@
-import { Container, Flex, SimpleGrid } from "@mantine/core";
+import { Container, Flex } from "@mantine/core";
 import { FC } from "react";
 import { Playback } from "./Playback";
-import { TrackLibrary } from "./TracksLibrary";
-import { TrackQueue } from "./TracksQueue";
 import { useSettingsStore } from "../store/settings";
+import { NetEaseSource } from "./NetEaseSource";
 
 const DesktopPage: FC<{ windowWidth: number }> = ({ windowWidth }) => {
     const interfaceWidth = useSettingsStore((s) => s.interfaceWidth);
@@ -16,11 +15,9 @@ const DesktopPage: FC<{ windowWidth: number }> = ({ windowWidth }) => {
         <Container size={defineWidth()}>
             <Flex p="sm" direction="column" justify="center" align="center" h="100vh">
                 <Playback />
-
-                <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm" mt="sm" w="100%">
-                    <TrackQueue />
-                    <TrackLibrary />
-                </SimpleGrid>
+                <Flex mt="sm" w="100%">
+                    <NetEaseSource />
+                </Flex>
             </Flex>
         </Container>
     );

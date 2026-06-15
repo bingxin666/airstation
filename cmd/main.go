@@ -20,7 +20,6 @@ func main() {
 
 	fs.DeleteDirIfExists(conf.TmpDir)
 	fs.MustDir(conf.TmpDir)
-	fs.MustDir(conf.TracksDir)
 	fs.MustDir(conf.DBDir)
 
 	stopSignal := make(chan os.Signal, 1)

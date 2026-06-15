@@ -13,7 +13,7 @@ export const AuthGuard: FC<{ children: JSX.Element }> = (props) => {
         try {
             handLoader.open();
             await airstationAPI.login(secret);
-            await airstationAPI.getQueue(); // Need to check is cookie setted correctly
+            await airstationAPI.getNetEaseConfig();
             setIsAuth(true);
         } catch (error) {
             errNotify(error);
@@ -26,7 +26,7 @@ export const AuthGuard: FC<{ children: JSX.Element }> = (props) => {
         (async () => {
             try {
                 handLoader.open();
-                await airstationAPI.getQueue();
+                await airstationAPI.getNetEaseConfig();
                 setIsAuth(true);
             } catch (error) {
                 const msg = handleErr(error);

@@ -11,6 +11,23 @@
     padding: 0.25rem 0.5rem;
 }
 
+.content {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: minmax(110px, 0.42fr) minmax(220px, 0.58fr);
+    align-items: center;
+    gap: clamp(0.5rem, 2vh, 1.5rem);
+    padding: 0.25rem 0.75rem;
+}
+
+@media (max-height: 640px) {
+    .content {
+        grid-template-rows: 96px minmax(180px, 1fr);
+        gap: 0.25rem;
+    }
+}
+
 .menu_mobile {
     background-color: var(--sidebar-color);
 }

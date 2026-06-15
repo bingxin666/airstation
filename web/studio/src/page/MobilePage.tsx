@@ -1,9 +1,8 @@
 import { Flex } from "@mantine/core";
 import { useState } from "react";
 import { MobileBar } from "./MobileBar";
+import { NetEaseSource } from "./NetEaseSource";
 import { Playback } from "./Playback";
-import { TrackLibrary } from "./TracksLibrary";
-import { TrackQueue } from "./TracksQueue";
 
 const MobilePage = () => {
     const [activeBar, setActiveBar] = useState("Playback");
@@ -14,11 +13,8 @@ const MobilePage = () => {
             <div style={{ flex: 1, display: isVisible("Playback") }}>
                 <Playback isMobile />
             </div>
-            <div style={{ flex: 1, display: isVisible("Queue") }}>
-                <TrackQueue isMobile />
-            </div>
-            <div style={{ flex: 1, display: isVisible("Tracks") }}>
-                <TrackLibrary isMobile />
+            <div style={{ flex: 1, display: isVisible("Source"), padding: 8, overflowY: "auto" }}>
+                <NetEaseSource />
             </div>
 
             <MobileBar activeBar={activeBar} setActiveBar={setActiveBar} />

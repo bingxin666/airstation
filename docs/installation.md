@@ -2,6 +2,8 @@
 
 To run Airstation on your machine, there are two ways: using [Docker](https://docs.docker.com/) (recommended) or building it yourself using the [Go](https://go.dev/) compiler for server, [Node.js](https://nodejs.org/) with [npm](https://www.npmjs.com/) for web clients and also have [FFmpeg](https://ffmpeg.org/) installed on your system.
 
+The player uses AMLL packages (`@applemusic-like-lyrics/core` and `@applemusic-like-lyrics/lyric`) for Apple Music-like lyrics. These are installed by `npm ci`/`npm install` with the rest of the player dependencies.
+
 ## Docker
 
 1.  Clone Airstation repository
@@ -44,6 +46,15 @@ And finally you can see:
 - Control panel on [http://localhost:7331/studio/](http://localhost:7331/studio/) (extra slash matters!)
 - Radio player on [http://localhost:7331](http://localhost:7331)
 
+After logging into the control panel, open the NetEase Cloud source section and save:
+
+- a NetEase Cloud Music playlist link, for example `https://music.163.com/#/playlist?id=3778678`
+- the requested quality (`standard`, `higher`, `exhigh`, `lossless`, or `hires`)
+- optionally, a NetEase login cookie such as `MUSIC_U=...` when the playlist or songs require your account
+
+The server keeps these values in SQLite and automatically builds the public HLS stream from random playable songs in that playlist.
+When lyrics are available, the player prefers NetEase word-by-word lyrics, then synced scrolling lyrics, then plain lyric text.
+
 To stop the container, just type:
 
 ```sh
@@ -63,7 +74,6 @@ services:
       - "7331:7331"
     volumes:
       - airstation-data:/app/storage
-      - ./static:/app/static
     restart: unless-stopped
     environment:
       AIRSTATION_SECRET_KEY: ${AIRSTATION_SECRET_KEY:-PASTE_YOUR_OWN_KEY}

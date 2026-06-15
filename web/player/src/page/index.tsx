@@ -6,6 +6,7 @@ import { closeEventSource, initEventSource } from "../store/events";
 import { History } from "./History";
 import styles from "./Page.module.css";
 import { StationInformation } from "./StationInformation";
+import { LyricsStage } from "./LyricsStage";
 
 export const Page = () => {
     onMount(() => {
@@ -23,7 +24,10 @@ export const Page = () => {
                 <ListenersCounter />
                 <StationInformation />
             </div>
-            <RadioButton />
+            <div class={styles.content}>
+                <RadioButton />
+                <LyricsStage />
+            </div>
             <CurrentTrack />
         </div>
     );

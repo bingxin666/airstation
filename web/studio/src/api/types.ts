@@ -6,13 +6,6 @@ export interface Track {
     bitRate: number;
 }
 
-export interface TracksPage {
-    tracks: Track[];
-    page: number;
-    limit: number;
-    total: number;
-}
-
 export interface PlaybackState {
     currentTrack: Track | null;
     currentTrackElapsed: number;
@@ -28,12 +21,24 @@ export interface ResponseOK {
     message: string;
 }
 
-export interface Playlist {
-    id: string;
-    name: string;
-    description?: string;
-    tracks: Track[];
+export type NetEaseQuality = "standard" | "higher" | "exhigh" | "lossless" | "hires";
+
+export interface NetEaseConfig {
+    playlistURL: string;
+    quality: NetEaseQuality;
+    cookie?: string;
+    clearCookie?: boolean;
+}
+
+export interface NetEasePublicConfig {
+    playlistURL: string;
+    playlistID: string;
+    quality: NetEaseQuality;
+    hasCookie: boolean;
+    accountName: string;
     trackCount: number;
+    lastError: string;
+    lastSyncedAt: number;
 }
 
 export interface StationInfo {

@@ -64,6 +64,42 @@ func (cli *CLI) MakeHLSPlaylist(trackPath, outDir, segName string, segDuration i
 	return nil
 }
 
+// MakeRemoteHLSPlaylist converts a remote audio URL into an HLS playlist with segmented files.
+func (cli *CLI) MakeRemoteHLSPlaylist(trackURL, outDir, segName string, segDuration, bitRate int) error {
+	hlsTime := strconv.Itoa(segDuration)
+	if bitRate <= 0 {
+		bitRate = 128
+	}
+	hlsSegName := fmt.Sprintf("%s/%s", outDir, segName) + "%d.ts"
+	hlsPlName := fmt.Sprintf("%s/%s", outDir, segName) + ".m3u8"
+
+	cmd := exec.Command(
+		ffmpegBin,
+		"-user_agent", "Mozilla/5.0 (compatible; Airstation/1.0)",
+		"-headers", "Referer: https://music.163.com\r\n",
+		"-i", trackURL,
+		"-vn",
+		"-c:a", "aac",
+		"-b:a", strconv.Itoa(bitRate)+"k",
+		"-start_number", "0",
+		"-hls_time", hlsTime,
+		"-hls_playlist_type", "event",
+		"-hls_segment_filename", hlsSegName,
+		hlsPlName,
+		"-y",
+	)
+
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
+
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("remote hls playlist generation failed: %v\n%s", err, errBuf.String())
+	}
+
+	return nil
+}
+
 // AudioMetadata extracts and returns metadata information from the specified audio file.
 // It uses ffprobe to retrieve details such as duration, bit rate, codec name, sample rate, and channel count.
 //

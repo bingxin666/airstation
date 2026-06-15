@@ -1,5 +1,12 @@
-import { PlaybackState, Playlist, ResponseErr, ResponseOK, StationInfo, Track, TracksPage } from "./types";
-import { jsonRequestParams, queryParams } from "./utils";
+import {
+    NetEaseConfig,
+    NetEasePublicConfig,
+    PlaybackState,
+    ResponseErr,
+    ResponseOK,
+    StationInfo,
+} from "./types";
+import { jsonRequestParams } from "./utils";
 
 export const API_HOST = "";
 export const API_PREFIX = "/api/v1";
@@ -35,79 +42,19 @@ class AirstationAPI {
         return await this.makeRequest<PlaybackState>(url, jsonRequestParams("POST", {}));
     }
 
-    async getTracks(page: number, limit: number, search: string, sortBy: keyof Track, sortOrder: "asc" | "desc") {
-        const url = `${this.url()}/tracks?${queryParams({
-            page,
-            limit,
-            search,
-            sort_by: sortBy,
-            sort_order: sortOrder,
-        })}`;
-        return await this.makeRequest<TracksPage>(url);
+    async getNetEaseConfig() {
+        const url = `${this.url()}/netease/config`;
+        return await this.makeRequest<NetEasePublicConfig>(url);
     }
 
-    async uploadTracks(files: File[]) {
-        const url = `${this.url()}/tracks`;
-        const formData = new FormData();
-
-        for (let i = 0; i < files.length; i++) {
-            formData.append("tracks", files[i]);
-        }
-
-        return await this.makeRequest<ResponseOK>(url, {
-            method: "POST",
-            body: formData,
-        });
+    async editNetEaseConfig(config: NetEaseConfig) {
+        const url = `${this.url()}/netease/config`;
+        return await this.makeRequest<NetEasePublicConfig>(url, jsonRequestParams("PUT", config));
     }
 
-    async deleteTracks(ids: string[]) {
-        const url = `${this.url()}/tracks`;
-        return await this.makeRequest<ResponseOK>(url, jsonRequestParams("DELETE", { ids }));
-    }
-
-    async getQueue() {
-        const url = `${this.url()}/queue`;
-        return await this.makeRequest<Track[]>(url);
-    }
-
-    async addToQueue(trackIDs: string[]) {
-        const url = `${this.url()}/queue`;
-        return await this.makeRequest<ResponseOK>(url, jsonRequestParams("POST", { ids: trackIDs }));
-    }
-
-    async updateQueue(trackIDs: string[]) {
-        const url = `${this.url()}/queue`;
-        return await this.makeRequest<ResponseOK>(url, jsonRequestParams("PUT", { ids: trackIDs }));
-    }
-
-    async removeFromQueue(trackIDs: string[]) {
-        const url = `${this.url()}/queue`;
-        return await this.makeRequest<ResponseOK>(url, jsonRequestParams("DELETE", { ids: trackIDs }));
-    }
-
-    async addPlaylist(name: string, trackIDs: string[], description?: string) {
-        const url = `${this.url()}/playlist`;
-        return await this.makeRequest<Playlist>(url, jsonRequestParams("POST", { name, description, trackIDs }));
-    }
-
-    async getPlaylists() {
-        const url = `${this.url()}/playlists`;
-        return await this.makeRequest<Playlist[]>(url);
-    }
-
-    async getPlaylist(id: string) {
-        const url = `${this.url()}/playlist/` + id;
-        return await this.makeRequest<Playlist>(url);
-    }
-
-    async editPlaylist(id: string, name: string, trackIDs: string[], description?: string) {
-        const url = `${this.url()}/playlist/` + id;
-        return await this.makeRequest<ResponseOK>(url, jsonRequestParams("PUT", { name, description, trackIDs }));
-    }
-
-    async deletePlaylist(id: string) {
-        const url = `${this.url()}/playlist/` + id;
-        return await this.makeRequest<ResponseOK>(url, jsonRequestParams("DELETE", {}));
+    async syncNetEasePlaylist() {
+        const url = `${this.url()}/netease/sync`;
+        return await this.makeRequest<NetEasePublicConfig>(url, jsonRequestParams("POST", {}));
     }
 
     async getStationInfo() {

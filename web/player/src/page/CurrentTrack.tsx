@@ -10,15 +10,39 @@ export const CurrentTrack = () => {
     onMount(async () => {
         try {
             const cs = await airstationAPI.getPlayback();
-            if (cs.isPlaying && cs.currentTrack) setTrackStore("trackName", cs.currentTrack.name);
+            if (cs.isPlaying && cs.currentTrack) {
+                setTrackStore({
+                    trackName: cs.currentTrack.name,
+                    trackID: cs.currentTrack.id,
+                    netEaseID: cs.currentNetEaseID,
+                    elapsedMs: cs.currentTrackElapsed * 1000,
+                    updatedAt: Date.now(),
+                });
+                const lyrics = await airstationAPI.getPlaybackLyrics();
+                setTrackStore("lyrics", lyrics);
+            }
         } catch (error) {
             console.log(error);
         }
 
-        addEventListener(EVENTS.newTrack, (e: MessageEvent<string>) => {
+        addEventListener(EVENTS.newTrack, async (e: MessageEvent<string>) => {
             const unixTime = getUnixTime();
             setTrackStore("trackName", e.data);
             addHistory({ id: unixTime, playedAt: unixTime, trackName: e.data });
+            try {
+                const cs = await airstationAPI.getPlayback();
+                setTrackStore({
+                    trackName: cs.currentTrack?.name || e.data,
+                    trackID: cs.currentTrack?.id || "",
+                    netEaseID: cs.currentNetEaseID,
+                    elapsedMs: cs.currentTrackElapsed * 1000,
+                    updatedAt: Date.now(),
+                });
+                const lyrics = await airstationAPI.getPlaybackLyrics();
+                setTrackStore("lyrics", lyrics);
+            } catch (error) {
+                console.log(error);
+            }
         });
     });
 
