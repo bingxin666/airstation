@@ -1,4 +1,4 @@
-import HLS from "hls.js";
+import HLS, { type FragChangedData } from "hls.js";
 import styles from "./RadioButton.module.css";
 import { setTrackStore, trackStore } from "../store/track";
 import { Component, onCleanup, onMount } from "solid-js";
@@ -6,40 +6,69 @@ import { addEventListener, EVENTS } from "../store/events";
 import { getCssVariable } from "../utils/document";
 import { getHueFromHex } from "../utils/color";
 import { syncPlaybackTrack } from "../store/playback";
+import { resetPlaybackAudioClock, setActivePlaybackFragment, updatePlaybackAudioClock } from "../store/playbackClock";
 
 const STREAM_SOURCE = "/stream";
+const PLAYBACK_SYNC_INTERVAL_MS = 15000;
 
 export const RadioButton = () => {
     let videoRef: HTMLAudioElement | undefined;
     let hls: HLS | undefined;
+    let syncTimer = 0;
 
     const initStream = () => {
         if (!trackStore.isPlay && HLS.isSupported()) {
             hls = new HLS();
+            hls.on(HLS.Events.FRAG_CHANGED, (_event, data: FragChangedData) => {
+                setActivePlaybackFragment(data.frag, videoRef);
+            });
             hls.loadSource(STREAM_SOURCE);
             hls.attachMedia(videoRef as unknown as HTMLMediaElement);
         }
+    };
+
+    const startPlaybackSync = () => {
+        if (syncTimer) return;
+
+        syncTimer = window.setInterval(() => {
+            syncPlaybackTrack().catch((error) => console.log(error));
+            updatePlaybackAudioClock(videoRef);
+        }, PLAYBACK_SYNC_INTERVAL_MS);
+    };
+
+    const stopPlaybackSync = () => {
+        if (!syncTimer) return;
+
+        window.clearInterval(syncTimer);
+        syncTimer = 0;
     };
 
     const handlePlay = () => {
         initStream();
         if (!trackStore.trackName) return;
         setTrackStore("isPlay", true);
+        startPlaybackSync();
     };
 
     const handlePause = () => {
         setTrackStore("isPlay", false);
+        stopPlaybackSync();
         hls?.destroy();
+        hls = undefined;
+        resetPlaybackAudioClock();
     };
 
     onMount(() => {
         addEventListener(EVENTS.pause, (_e: MessageEvent<string>) => {
+            stopPlaybackSync();
+            resetPlaybackAudioClock();
             setTrackStore({
                 trackName: "",
                 trackArtist: "",
                 trackID: "",
                 netEaseID: 0,
                 elapsedMs: 0,
+                durationMs: 0,
                 updatedAt: Date.now(),
                 lyrics: null,
             });
@@ -47,6 +76,7 @@ export const RadioButton = () => {
         });
 
         addEventListener(EVENTS.play, async (e: MessageEvent<string>) => {
+            resetPlaybackAudioClock();
             setTrackStore("lyrics", null);
             try {
                 await syncPlaybackTrack();
@@ -58,6 +88,7 @@ export const RadioButton = () => {
                     trackID: "",
                     netEaseID: 0,
                     elapsedMs: 0,
+                    durationMs: 0,
                     updatedAt: Date.now(),
                     lyrics: null,
                 });
@@ -75,9 +106,23 @@ export const RadioButton = () => {
         });
     });
 
+    onCleanup(() => {
+        stopPlaybackSync();
+        hls?.destroy();
+        resetPlaybackAudioClock();
+    });
+
     return (
         <div class={styles.container}>
-            <audio id="video" ref={videoRef} onPause={handlePause} onPlay={handlePlay}></audio>
+            <audio
+                id="video"
+                ref={videoRef}
+                onPause={handlePause}
+                onPlay={handlePlay}
+                onPlaying={() => updatePlaybackAudioClock(videoRef)}
+                onTimeUpdate={() => updatePlaybackAudioClock(videoRef)}
+                onRateChange={() => updatePlaybackAudioClock(videoRef)}
+            ></audio>
             <div class={styles.box}>
                 {trackStore.isPlay ? (
                     <AnimatedPauseButton pause={() => videoRef?.pause()} media={videoRef} />

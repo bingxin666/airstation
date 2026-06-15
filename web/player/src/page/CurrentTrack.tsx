@@ -24,6 +24,7 @@ export const CurrentTrack = () => {
                     trackID: "",
                     netEaseID: 0,
                     elapsedMs: 0,
+                    durationMs: 0,
                     updatedAt: Date.now(),
                     lyrics: null,
                 });

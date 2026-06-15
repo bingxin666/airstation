@@ -2,12 +2,21 @@ import { createEffect, createMemo, onCleanup, Show } from "solid-js";
 import { LayoutAlignAnchor, LyricPlayer, type LyricLine } from "@applemusic-like-lyrics/core";
 import "@applemusic-like-lyrics/core/style.css";
 import { parseLrc, parseYrc, type LyricLine as ParsedLyricLine } from "@applemusic-like-lyrics/lyric";
+import { correctedPlaybackTimeMs } from "../store/playbackClock";
 import { trackStore } from "../store/track";
 import styles from "./LyricsStage.module.css";
+
+const TRANSLATION_SYNC_TOLERANCE_MS = 1200;
+const TRANSLATION_WINDOW_PADDING_MS = 250;
 
 type ParsedLyrics = {
     mode: "word" | "line" | "text" | "none";
     lines: LyricLine[];
+    text: string;
+};
+
+type TranslationLine = {
+    startTime: number;
     text: string;
 };
 
@@ -109,15 +118,26 @@ export const LyricsStage = () => {
 };
 
 const currentTimeMs = () => {
-    if (!trackStore.isPlay) return trackStore.elapsedMs;
-    return trackStore.elapsedMs + Math.max(0, Date.now() - trackStore.updatedAt);
+    return correctedPlaybackTimeMs({
+        netEaseID: trackStore.netEaseID,
+        elapsedMs: trackStore.elapsedMs,
+        durationMs: trackStore.durationMs,
+        updatedAt: trackStore.updatedAt,
+        isPlay: trackStore.isPlay,
+    });
 };
 
 const withTranslatedLyrics = (lines: ParsedLyricLine[], translation: string): LyricLine[] => {
     const translations = parseTranslationLines(translation);
-    return toCoreLines(lines).map((line) => ({
+    return applyTranslatedLyrics(toCoreLines(lines), translations);
+};
+
+const applyTranslatedLyrics = (lines: LyricLine[], translations: TranslationLine[]): LyricLine[] => {
+    if (translations.length === 0) return lines;
+
+    return lines.map((line, index) => ({
         ...line,
-        translatedLyric: findTranslation(line.startTime, translations) || line.translatedLyric,
+        translatedLyric: findTranslation(line, index, lines, translations) || line.translatedLyric,
     }));
 };
 
@@ -130,32 +150,89 @@ const parseTranslationLines = (translation: string) => {
                 startTime: line.startTime,
                 text: line.words.map((word) => word.word).join("").trim(),
             }))
-            .filter((line) => line.text.length > 0);
+            .filter((line) => line.text.length > 0)
+            .sort((a, b) => a.startTime - b.startTime);
     } catch (error) {
         console.log("Failed to parse translated lyrics:", error);
         return [];
     }
 };
 
-const findTranslation = (startTime: number, translations: { startTime: number; text: string }[]) => {
-    const exact = translations.find((line) => line.startTime === startTime);
-    if (exact) return exact.text;
+const findTranslation = (
+    line: LyricLine,
+    index: number,
+    lines: LyricLine[],
+    translations: TranslationLine[],
+) => {
+    const previous = lines[index - 1];
+    const next = lines[index + 1];
+    const windowStart =
+        (previous ? midpoint(previous.startTime, line.startTime) : line.startTime - TRANSLATION_SYNC_TOLERANCE_MS) -
+        TRANSLATION_WINDOW_PADDING_MS;
+    const windowEnd =
+        (next ? midpoint(line.startTime, next.startTime) : line.endTime + TRANSLATION_SYNC_TOLERANCE_MS) +
+        TRANSLATION_WINDOW_PADDING_MS;
 
-    const close = translations.find((line) => Math.abs(line.startTime - startTime) <= 120);
-    return close?.text || "";
+    const windowed = bestTranslationIndex(
+        translations,
+        line.startTime,
+        (translation) => translation.startTime >= windowStart && translation.startTime < windowEnd,
+    );
+    if (windowed >= 0) {
+        return translations[windowed].text;
+    }
+
+    const nearby = bestTranslationIndex(
+        translations,
+        line.startTime,
+        (translation) => Math.abs(translation.startTime - line.startTime) <= TRANSLATION_SYNC_TOLERANCE_MS,
+    );
+    if (nearby >= 0) {
+        return translations[nearby].text;
+    }
+
+    return "";
+};
+
+const bestTranslationIndex = (
+    translations: TranslationLine[],
+    startTime: number,
+    predicate: (translation: TranslationLine) => boolean,
+) => {
+    let bestIndex = -1;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    translations.forEach((translation, index) => {
+        if (!predicate(translation)) return;
+
+        const distance = Math.abs(translation.startTime - startTime);
+        if (distance < bestDistance) {
+            bestIndex = index;
+            bestDistance = distance;
+        }
+    });
+
+    return bestIndex;
+};
+
+const midpoint = (a: number, b: number) => {
+    return a + (b - a) / 2;
 };
 
 const toCoreLines = (lines: ParsedLyricLine[]): LyricLine[] => {
     return lines
         .map((line, index) => {
             const nextLine = lines[index + 1];
-            const startTime = line.startTime || line.words[0]?.startTime || 0;
-            const inferredEndTime = nextLine?.startTime || line.words[line.words.length - 1]?.endTime || startTime + 4000;
+            const startTime = finiteTimestamp(line.startTime) ?? finiteTimestamp(line.words[0]?.startTime) ?? 0;
+            const inferredEndTime =
+                finiteTimestamp(nextLine?.startTime) ??
+                finiteTimestamp(line.words[line.words.length - 1]?.endTime) ??
+                startTime + 4000;
             const endTime = Number.isFinite(line.endTime) && line.endTime > startTime ? line.endTime : inferredEndTime;
             const words = line.words.length
                 ? line.words.map((word) => ({
                       word: word.word,
-                      startTime: word.startTime || startTime,
+                      startTime: finiteTimestamp(word.startTime) ?? startTime,
                       endTime: word.endTime > word.startTime ? word.endTime : endTime,
                       romanWord: word.romanWord,
                   }))
@@ -172,4 +249,8 @@ const toCoreLines = (lines: ParsedLyricLine[]): LyricLine[] => {
             };
         })
         .filter((line) => line.words.some((word) => word.word.trim() !== ""));
+};
+
+const finiteTimestamp = (value: number | undefined) => {
+    return Number.isFinite(value) ? value : undefined;
 };

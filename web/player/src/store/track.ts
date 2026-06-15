@@ -7,6 +7,7 @@ export const [trackStore, setTrackStore] = createStore({
     trackID: "",
     netEaseID: 0,
     elapsedMs: 0,
+    durationMs: 0,
     updatedAt: 0,
     lyrics: null as PlaybackLyrics | null,
     isPlay: false,
