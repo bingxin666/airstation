@@ -18,12 +18,12 @@ const STREAM_SOURCE = "/stream";
 const PLAYBACK_SYNC_INTERVAL_MS = 15000;
 const HLS_CONFIG = {
     lowLatencyMode: false,
-    initialLiveManifestSize: 3,
-    liveSyncDurationCount: 3,
-    liveMaxLatencyDurationCount: 9,
-    maxBufferLength: 90,
-    maxMaxBufferLength: 180,
-    backBufferLength: 30,
+    initialLiveManifestSize: 1,
+    liveSyncDurationCount: 1,
+    liveMaxLatencyDurationCount: 3,
+    maxBufferLength: 30,
+    maxMaxBufferLength: 60,
+    backBufferLength: 15,
     startFragPrefetch: true,
     manifestLoadingMaxRetry: 6,
     levelLoadingMaxRetry: 8,

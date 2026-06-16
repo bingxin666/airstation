@@ -1,6 +1,6 @@
 import type { Fragment } from "hls.js";
 
-const STREAM_SEGMENT_MS = 10000;
+const STREAM_SEGMENT_MS = 5000;
 const AUDIO_CLOCK_MAX_AGE_MS = 8000;
 
 type AudioClock = {
