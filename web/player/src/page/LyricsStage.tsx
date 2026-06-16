@@ -1,4 +1,4 @@
-import { createEffect, createMemo, onCleanup, Show } from "solid-js";
+import { createEffect, createMemo, onCleanup, Show, untrack } from "solid-js";
 import { LayoutAlignAnchor, LyricPlayer, type LyricLine } from "@applemusic-like-lyrics/core";
 import "@applemusic-like-lyrics/core/style.css";
 import { parseLrc, parseYrc, type LyricLine as ParsedLyricLine } from "@applemusic-like-lyrics/lyric";
@@ -75,7 +75,7 @@ export const LyricsStage = () => {
 
         ensurePlayer();
         player?.setWordFadeWidth(current.mode === "word" ? 0.55 : 0.0001);
-        player?.setLyricLines(current.lines, currentTimeMs());
+        player?.setLyricLines(current.lines, untrack(currentTimeMs));
         player?.calcLayout(true, true);
     });
 
