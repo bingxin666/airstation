@@ -47,14 +47,14 @@ func NewServer(store storage.Storage, conf *config.Config, logger *slog.Logger) 
 }
 
 func (s *Server) Run() {
-	s.registerMP2TMimeType()
+	s.registerStreamingMimeTypes()
 
 	// Public handlers
 	s.router.HandleFunc("GET /stream", s.handleHLSPlaylist)
 	s.router.HandleFunc("GET /api/v1/events", s.handleEvents)
 	s.router.HandleFunc("GET /api/v1/station/info", s.handleStationInfo)
 	s.router.HandleFunc("POST /api/v1/login", s.handleLogin)
-	s.router.Handle("GET /static/tmp/", s.handleStaticDirWithoutCache("/static/tmp", s.config.TmpDir))
+	s.router.Handle("GET /static/tmp/", s.handleStaticDirWithSegmentCache("/static/tmp", s.config.TmpDir))
 	s.router.Handle("GET /api/v1/playback", http.HandlerFunc(s.handlePlaybackState))
 	s.router.Handle("GET /api/v1/playback/lyrics", http.HandlerFunc(s.handlePlaybackLyrics))
 
@@ -90,10 +90,12 @@ func (s *Server) Run() {
 	}
 }
 
-func (s *Server) registerMP2TMimeType() {
-	err := mime.AddExtensionType(hls.SegmentExtension, "video/mp2t")
-	if err != nil {
-		s.logger.Error("MP2T mime type registration failed", slog.String("info", err.Error()))
+func (s *Server) registerStreamingMimeTypes() {
+	if err := mime.AddExtensionType(hls.SegmentExtension, "video/iso.segment"); err != nil {
+		s.logger.Error("HLS segment mime type registration failed", slog.String("info", err.Error()))
+	}
+	if err := mime.AddExtensionType(hls.InitSegmentExtension, "audio/mp4"); err != nil {
+		s.logger.Error("HLS init segment mime type registration failed", slog.String("info", err.Error()))
 	}
 }
 

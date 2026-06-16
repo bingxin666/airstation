@@ -3,7 +3,7 @@ package track
 import "github.com/cheatsnake/airstation/internal/pkg/hls"
 
 const (
-	minAllowedTrackDuration = hls.DefaultMaxSegmentDuration * hls.DefaultLiveSegmentsAmount
+	minAllowedTrackDuration = hls.DefaultMaxSegmentDuration * 3
 	maxAllowedTrackDuration = 36000 // 10 hours (just an adequate barrier)
 	defaultAudioBitRate     = 192   // best balance between quallity and size
 )

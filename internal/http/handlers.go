@@ -14,6 +14,8 @@ import (
 
 func (s *Server) handleHLSPlaylist(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "audio/mpegurl")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Pragma", "no-cache")
 
 	fmt.Fprint(w, s.playbackState.Playlist())
 }
@@ -161,11 +163,11 @@ func (s *Server) handleStaticDir(prefix string, path string) http.Handler {
 	return http.StripPrefix(prefix, http.FileServer(http.Dir(path)))
 }
 
-func (s *Server) handleStaticDirWithoutCache(prefix string, path string) http.Handler {
+func (s *Server) handleStaticDirWithSegmentCache(prefix string, path string) http.Handler {
 	fileHandler := http.StripPrefix(prefix, http.FileServer(http.Dir(path)))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Cache-Control", "public, max-age=3600, immutable")
 		fileHandler.ServeHTTP(w, r)
 	})
 }

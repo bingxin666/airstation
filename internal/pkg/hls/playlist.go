@@ -70,8 +70,15 @@ func (p *Playlist) Generate(elapsedTime float64) string {
 	}
 
 	playlist := hlsHeader(p.MaxSegmentDuration, p.mediaSequence, p.disconSequence, offset)
+	activeInitPath := ""
 	for _, seg := range liveSegments {
-		playlist += hlsSegment(seg.Duration, seg.Path, seg.IsFirst)
+		initPath := ""
+		if seg.InitPath != "" && (activeInitPath == "" || seg.InitPath != activeInitPath || seg.IsFirst) {
+			initPath = seg.InitPath
+			activeInitPath = seg.InitPath
+		}
+
+		playlist += hlsSegment(seg.Duration, seg.Path, seg.IsFirst, initPath)
 	}
 
 	return playlist
@@ -166,7 +173,7 @@ func (p *Playlist) calcCurrentSegmentIndex(elapsedTime float64) int {
 func hlsHeader(dur int, mediaSeq, disconSeq int64, offset float64) string {
 	currentTime := time.Now().UTC().Round(time.Millisecond).Format(timeFormat)
 	return "#EXTM3U\n" +
-		"#EXT-X-VERSION:6\n" +
+		"#EXT-X-VERSION:7\n" +
 		"#EXT-X-PROGRAM-DATE-TIME:" + currentTime + "\n" +
 		"#EXT-X-TARGETDURATION:" + strconv.Itoa(dur) + "\n" +
 		"#EXT-X-MEDIA-SEQUENCE:" + strconv.FormatInt(mediaSeq, 10) + "\n" +
@@ -175,15 +182,20 @@ func hlsHeader(dur int, mediaSeq, disconSeq int64, offset float64) string {
 }
 
 // hlsSegment generates an HLS segment entry with the specified duration and path.
-func hlsSegment(dur float64, path string, isDiscon bool) string {
+func hlsSegment(dur float64, path string, isDiscon bool, initPath ...string) string {
 	disconTag := ""
+	mapTag := ""
 
 	if isDiscon {
 		disconTag = "#EXT-X-DISCONTINUITY\n"
 	}
+	if len(initPath) > 0 && initPath[0] != "" {
+		mapTag = "#EXT-X-MAP:URI=\"" + initPath[0] + "\"\n"
+	}
 
 	duration := strconv.FormatFloat(dur, 'f', 2, 64)
 	return disconTag +
+		mapTag +
 		"#EXTINF:" + duration + ",\n" +
 		path + "\n"
 }

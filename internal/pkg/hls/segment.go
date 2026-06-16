@@ -10,6 +10,7 @@ import (
 type Segment struct {
 	Duration float64 // The length of the segment in seconds.
 	Path     string  // The file path or URL of the segment.
+	InitPath string  // The file path or URL of the fMP4 initialization segment.
 	IsFirst  bool    // A flag indicating whether this segment is the first segment in the track.
 }
 
@@ -52,6 +53,7 @@ func GenerateSegments(trackDuration float64, segmentDuration int, trackID, outDi
 
 	remaining := trackDuration
 	index := 0
+	initPath := filepath.Join(outDir, trackID+"init"+InitSegmentExtension)
 
 	// Generate segments until the entire track is covered
 	for remaining > 0 {
@@ -61,7 +63,9 @@ func GenerateSegments(trackDuration float64, segmentDuration int, trackID, outDi
 		// Use the smaller of the remaining or full segment duration
 		duration := math.Min(remaining, float64(segmentDuration))
 		isFirst := index == 0
-		segments = append(segments, NewSegment(duration, segPath, isFirst))
+		segment := NewSegment(duration, segPath, isFirst)
+		segment.InitPath = initPath
+		segments = append(segments, segment)
 
 		remaining -= duration
 		index++

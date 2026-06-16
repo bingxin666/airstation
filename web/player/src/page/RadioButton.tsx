@@ -1,4 +1,4 @@
-import HLS, { type FragChangedData } from "hls.js";
+import HLS, { type FragChangedData, type HlsConfig } from "hls.js";
 import styles from "./RadioButton.module.css";
 import { setTrackStore, trackStore } from "../store/track";
 import { Component, onCleanup, onMount } from "solid-js";
@@ -16,6 +16,22 @@ import {
 
 const STREAM_SOURCE = "/stream";
 const PLAYBACK_SYNC_INTERVAL_MS = 15000;
+const HLS_CONFIG = {
+    lowLatencyMode: false,
+    initialLiveManifestSize: 3,
+    liveSyncDurationCount: 3,
+    liveMaxLatencyDurationCount: 9,
+    maxBufferLength: 90,
+    maxMaxBufferLength: 180,
+    backBufferLength: 30,
+    startFragPrefetch: true,
+    manifestLoadingMaxRetry: 6,
+    levelLoadingMaxRetry: 8,
+    fragLoadingMaxRetry: 10,
+    manifestLoadingTimeOut: 30000,
+    levelLoadingTimeOut: 30000,
+    fragLoadingTimeOut: 45000,
+} satisfies Partial<HlsConfig>;
 
 export const RadioButton = () => {
     let videoRef: HTMLAudioElement | undefined;
@@ -23,14 +39,26 @@ export const RadioButton = () => {
     let syncTimer = 0;
 
     const initStream = () => {
-        if (!trackStore.isPlay && HLS.isSupported()) {
-            hls = new HLS();
+        if (!videoRef || hls) return;
+
+        if (HLS.isSupported()) {
+            hls = new HLS(HLS_CONFIG);
             hls.on(HLS.Events.FRAG_CHANGED, (_event, data: FragChangedData) => {
                 setActivePlaybackFragment(data.frag, videoRef);
             });
             hls.loadSource(STREAM_SOURCE);
             hls.attachMedia(videoRef as unknown as HTMLMediaElement);
+            return;
         }
+
+        if (videoRef.canPlayType("application/vnd.apple.mpegurl")) {
+            videoRef.src = STREAM_SOURCE;
+        }
+    };
+
+    const playStream = () => {
+        initStream();
+        videoRef?.play().catch((error) => console.log(error));
     };
 
     const startPlaybackSync = () => {
@@ -75,7 +103,7 @@ export const RadioButton = () => {
     };
 
     onMount(() => {
-        setMediaSessionActionHandlers(videoRef);
+        setMediaSessionActionHandlers(videoRef, playStream);
 
         addEventListener(EVENTS.pause, (_e: MessageEvent<string>) => {
             stopPlaybackSync();
@@ -115,14 +143,14 @@ export const RadioButton = () => {
             }
 
             if (trackStore.isPlay) (() => videoRef?.pause())();
-            (() => videoRef?.play())();
+            playStream();
             refreshMediaSessionSoon();
         });
 
         document.body.addEventListener("keydown", (event) => {
             if (event.key === " ") {
                 event.preventDefault();
-                trackStore.isPlay ? videoRef?.pause() : videoRef?.play();
+                trackStore.isPlay ? videoRef?.pause() : playStream();
             }
         });
     });
@@ -158,7 +186,7 @@ export const RadioButton = () => {
                 {trackStore.isPlay ? (
                     <AnimatedPauseButton pause={() => videoRef?.pause()} media={videoRef} />
                 ) : (
-                    <div class={styles.play_icon} tabIndex={0} role="button" onClick={() => videoRef?.play()}></div>
+                    <div class={styles.play_icon} tabIndex={0} role="button" onClick={playStream}></div>
                 )}
             </div>
         </div>

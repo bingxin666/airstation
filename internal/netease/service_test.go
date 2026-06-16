@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/cheatsnake/airstation/internal/pkg/ffmpeg"
+	"github.com/cheatsnake/airstation/internal/pkg/hls"
 	"github.com/cheatsnake/airstation/internal/station"
 )
 
@@ -388,12 +389,15 @@ func TestIntegration_ExamplePlaylistCanGenerateHLS(t *testing.T) {
 	if len(data) == 0 {
 		t.Fatal("generated hls playlist is empty")
 	}
-	matches, err := filepath.Glob(filepath.Join(outDir, "example-*.ts"))
+	matches, err := filepath.Glob(filepath.Join(outDir, "example-*"+hls.SegmentExtension))
 	if err != nil {
 		t.Fatalf("glob generated hls segments: %v", err)
 	}
 	if len(matches) == 0 {
 		t.Fatal("generated no hls segments")
+	}
+	if _, err := os.Stat(filepath.Join(outDir, "example-init"+hls.InitSegmentExtension)); err != nil {
+		t.Fatalf("generated no hls init segment: %v", err)
 	}
 }
 

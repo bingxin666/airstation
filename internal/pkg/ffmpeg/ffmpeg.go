@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/cheatsnake/airstation/internal/pkg/fs"
+	"github.com/cheatsnake/airstation/internal/pkg/hls"
 	"github.com/cheatsnake/airstation/internal/pkg/ulid"
 )
 
@@ -23,7 +24,7 @@ func NewCLI() *CLI {
 }
 
 // MakeHLSPlaylist converts an audio track into an HLS (HTTP Live Streaming) playlist with segmented files.
-// It generates a playlist (.m3u8) and segment files (.ts) in the specified output directory.
+// It generates a playlist (.m3u8) and fMP4 segment files in the specified output directory.
 //
 // Parameters:
 //   - trackPath: The path to the source audio file to be converted into HLS format.
@@ -39,8 +40,9 @@ func (cli *CLI) MakeHLSPlaylist(trackPath, outDir, segName string, segDuration i
 	}
 
 	hlsTime := strconv.Itoa(segDuration)
-	hlsSegName := fmt.Sprintf("%s/%s", outDir, segName) + "%d.ts"
+	hlsSegName := fmt.Sprintf("%s/%s", outDir, segName) + "%d" + hls.SegmentExtension
 	hlsPlName := fmt.Sprintf("%s/%s", outDir, segName) + ".m3u8"
+	hlsInitName := segName + "init" + hls.InitSegmentExtension
 
 	cmd := exec.Command(
 		ffmpegBin,
@@ -49,6 +51,8 @@ func (cli *CLI) MakeHLSPlaylist(trackPath, outDir, segName string, segDuration i
 		"-start_number", "0",
 		"-hls_time", hlsTime,
 		"-hls_playlist_type", "event",
+		"-hls_segment_type", "fmp4",
+		"-hls_fmp4_init_filename", hlsInitName,
 		"-hls_segment_filename", hlsSegName,
 		hlsPlName,
 	)
@@ -70,8 +74,9 @@ func (cli *CLI) MakeRemoteHLSPlaylist(trackURL, outDir, segName string, segDurat
 	if bitRate <= 0 {
 		bitRate = 128
 	}
-	hlsSegName := fmt.Sprintf("%s/%s", outDir, segName) + "%d.ts"
+	hlsSegName := fmt.Sprintf("%s/%s", outDir, segName) + "%d" + hls.SegmentExtension
 	hlsPlName := fmt.Sprintf("%s/%s", outDir, segName) + ".m3u8"
+	hlsInitName := segName + "init" + hls.InitSegmentExtension
 
 	cmd := exec.Command(
 		ffmpegBin,
@@ -84,6 +89,8 @@ func (cli *CLI) MakeRemoteHLSPlaylist(trackURL, outDir, segName string, segDurat
 		"-start_number", "0",
 		"-hls_time", hlsTime,
 		"-hls_playlist_type", "event",
+		"-hls_segment_type", "fmp4",
+		"-hls_fmp4_init_filename", hlsInitName,
 		"-hls_segment_filename", hlsSegName,
 		hlsPlName,
 		"-y",

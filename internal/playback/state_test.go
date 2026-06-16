@@ -135,10 +135,10 @@ func TestState_LoadNextTrackUsesPreloadedSegmentsAndMetadata(t *testing.T) {
 	}
 
 	playlist := state.playlist.Generate(0)
-	if !strings.Contains(playlist, "next-seg-0.ts") {
+	if !strings.Contains(playlist, "next-seg-0"+hls.SegmentExtension) {
 		t.Fatalf("playlist did not switch to preloaded next segments:\n%s", playlist)
 	}
-	if !strings.Contains(playlist, "following-seg-0.ts") {
+	if !strings.Contains(playlist, "following-seg-0"+hls.SegmentExtension) {
 		t.Fatalf("playlist did not carry following preloaded segments:\n%s", playlist)
 	}
 }
@@ -191,8 +191,8 @@ func stateTrack(songID int64, name, artist, segmentPrefix string, duration float
 
 func stateSegments(prefix string, duration float64) []*hls.Segment {
 	return []*hls.Segment{
-		{Duration: duration / 2, Path: prefix + "0.ts", IsFirst: true},
-		{Duration: duration / 2, Path: prefix + "1.ts"},
+		{Duration: duration / 2, Path: prefix + "0" + hls.SegmentExtension, IsFirst: true},
+		{Duration: duration / 2, Path: prefix + "1" + hls.SegmentExtension},
 	}
 }
 

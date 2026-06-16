@@ -9,6 +9,7 @@ import (
 
 	"github.com/cheatsnake/airstation/internal/netease"
 	"github.com/cheatsnake/airstation/internal/pkg/ffmpeg"
+	"github.com/cheatsnake/airstation/internal/pkg/hls"
 	"github.com/cheatsnake/airstation/internal/station"
 )
 
@@ -84,7 +85,7 @@ func TestIntegration_StatePlayCanGenerateExamplePlaylistStream(t *testing.T) {
 	if !strings.Contains(state.PlaylistStr, "#EXTM3U") {
 		t.Fatalf("playlist string is not an m3u8 playlist:\n%s", state.PlaylistStr)
 	}
-	if !strings.Contains(state.PlaylistStr, ".ts") {
+	if !strings.Contains(state.PlaylistStr, hls.SegmentExtension) {
 		t.Fatalf("playlist string contains no segments:\n%s", state.PlaylistStr)
 	}
 }

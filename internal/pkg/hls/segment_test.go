@@ -1,6 +1,7 @@
 package hls
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -91,10 +92,10 @@ func TestGenerateSegments(t *testing.T) {
 			trackID:         "track1",
 			outDir:          "/out",
 			expectedSegments: []*Segment{
-				{Duration: 3.0, Path: "/out/track10.ts", IsFirst: true},
-				{Duration: 3.0, Path: "/out/track11.ts", IsFirst: false},
-				{Duration: 3.0, Path: "/out/track12.ts", IsFirst: false},
-				{Duration: 1.0, Path: "/out/track13.ts", IsFirst: false},
+				{Duration: 3.0, Path: filepath.Join("/out", "track10"+SegmentExtension), InitPath: filepath.Join("/out", "track1init"+InitSegmentExtension), IsFirst: true},
+				{Duration: 3.0, Path: filepath.Join("/out", "track11"+SegmentExtension), InitPath: filepath.Join("/out", "track1init"+InitSegmentExtension), IsFirst: false},
+				{Duration: 3.0, Path: filepath.Join("/out", "track12"+SegmentExtension), InitPath: filepath.Join("/out", "track1init"+InitSegmentExtension), IsFirst: false},
+				{Duration: 1.0, Path: filepath.Join("/out", "track13"+SegmentExtension), InitPath: filepath.Join("/out", "track1init"+InitSegmentExtension), IsFirst: false},
 			},
 		},
 		{
@@ -120,9 +121,9 @@ func TestGenerateSegments(t *testing.T) {
 			trackID:         "track4",
 			outDir:          "/out",
 			expectedSegments: []*Segment{
-				{Duration: 3.0, Path: "/out/track40.ts", IsFirst: true},
-				{Duration: 3.0, Path: "/out/track41.ts", IsFirst: false},
-				{Duration: 3.0, Path: "/out/track42.ts", IsFirst: false},
+				{Duration: 3.0, Path: filepath.Join("/out", "track40"+SegmentExtension), InitPath: filepath.Join("/out", "track4init"+InitSegmentExtension), IsFirst: true},
+				{Duration: 3.0, Path: filepath.Join("/out", "track41"+SegmentExtension), InitPath: filepath.Join("/out", "track4init"+InitSegmentExtension), IsFirst: false},
+				{Duration: 3.0, Path: filepath.Join("/out", "track42"+SegmentExtension), InitPath: filepath.Join("/out", "track4init"+InitSegmentExtension), IsFirst: false},
 			},
 		},
 		{
@@ -132,9 +133,9 @@ func TestGenerateSegments(t *testing.T) {
 			trackID:         "track5",
 			outDir:          "/out",
 			expectedSegments: []*Segment{
-				{Duration: 10.0, Path: "/out/track50.ts", IsFirst: true},
-				{Duration: 10.0, Path: "/out/track51.ts", IsFirst: false},
-				{Duration: 5.0, Path: "/out/track52.ts", IsFirst: false},
+				{Duration: 10.0, Path: filepath.Join("/out", "track50"+SegmentExtension), InitPath: filepath.Join("/out", "track5init"+InitSegmentExtension), IsFirst: true},
+				{Duration: 10.0, Path: filepath.Join("/out", "track51"+SegmentExtension), InitPath: filepath.Join("/out", "track5init"+InitSegmentExtension), IsFirst: false},
+				{Duration: 5.0, Path: filepath.Join("/out", "track52"+SegmentExtension), InitPath: filepath.Join("/out", "track5init"+InitSegmentExtension), IsFirst: false},
 			},
 		},
 	}
@@ -153,6 +154,9 @@ func TestGenerateSegments(t *testing.T) {
 				}
 				if gotSegment.Path != c.expectedSegments[i].Path {
 					t.Errorf("Segment %d: expected path %q, got %q", i, c.expectedSegments[i].Path, gotSegment.Path)
+				}
+				if gotSegment.InitPath != c.expectedSegments[i].InitPath {
+					t.Errorf("Segment %d: expected init path %q, got %q", i, c.expectedSegments[i].InitPath, gotSegment.InitPath)
 				}
 				if gotSegment.IsFirst != c.expectedSegments[i].IsFirst {
 					t.Errorf("Segment %d: expected IsFirst %v, got %v", i, c.expectedSegments[i].IsFirst, gotSegment.IsFirst)

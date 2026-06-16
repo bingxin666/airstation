@@ -1,6 +1,6 @@
 import type { Fragment } from "hls.js";
 
-const STREAM_SEGMENT_MS = 5000;
+const STREAM_SEGMENT_MS = 10000;
 const AUDIO_CLOCK_MAX_AGE_MS = 8000;
 
 type AudioClock = {
@@ -68,7 +68,7 @@ const currentAudioElapsedMs = (songID: number, isPlay: boolean) => {
 
 const segmentFromFragment = (fragment: Fragment) => {
     const rawURL = fragment.relurl || fragment.url;
-    const match = rawURL.match(/(?:^|\/)netease-(\d+)-\d+-(\d+)\.ts(?:$|\?)/);
+    const match = rawURL.match(/(?:^|\/)netease-(\d+)-\d+-(\d+)\.(?:m4s|ts)(?:$|\?)/);
     if (!match) return null;
 
     const songID = Number(match[1]);

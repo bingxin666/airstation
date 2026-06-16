@@ -38,11 +38,15 @@ export const MediaSession = () => {
     return null;
 };
 
-export const setMediaSessionActionHandlers = (media?: HTMLMediaElement) => {
+export const setMediaSessionActionHandlers = (media?: HTMLMediaElement, play?: () => void) => {
     const mediaSession = getMediaSession();
     if (!mediaSession || !media) return;
 
     setActionHandler(mediaSession, "play", () => {
+        if (play) {
+            play();
+            return;
+        }
         media.play().catch((error) => console.log(error));
     });
     setActionHandler(mediaSession, "pause", () => {
