@@ -7,7 +7,12 @@ import { getCssVariable } from "../utils/document";
 import { getHueFromHex } from "../utils/color";
 import { syncPlaybackTrack } from "../store/playback";
 import { resetPlaybackAudioClock, setActivePlaybackFragment, updatePlaybackAudioClock } from "../store/playbackClock";
-import { clearMediaSessionActionHandlers, setMediaSessionActionHandlers } from "./MediaSession";
+import {
+    clearMediaSessionActionHandlers,
+    refreshMediaSessionPosition,
+    refreshMediaSessionSoon,
+    setMediaSessionActionHandlers,
+} from "./MediaSession";
 
 const STREAM_SOURCE = "/stream";
 const PLAYBACK_SYNC_INTERVAL_MS = 15000;
@@ -32,8 +37,11 @@ export const RadioButton = () => {
         if (syncTimer) return;
 
         syncTimer = window.setInterval(() => {
-            syncPlaybackTrack().catch((error) => console.log(error));
+            syncPlaybackTrack()
+                .then(() => refreshMediaSessionSoon())
+                .catch((error) => console.log(error));
             updatePlaybackAudioClock(videoRef);
+            refreshMediaSessionPosition();
         }, PLAYBACK_SYNC_INTERVAL_MS);
     };
 
@@ -46,9 +54,15 @@ export const RadioButton = () => {
 
     const handlePlay = () => {
         initStream();
-        if (!trackStore.trackName) return;
         setTrackStore("isPlay", true);
         startPlaybackSync();
+        refreshMediaSessionSoon();
+
+        if (!trackStore.netEaseID) {
+            syncPlaybackTrack()
+                .then(() => refreshMediaSessionSoon())
+                .catch((error) => console.log(error));
+        }
     };
 
     const handlePause = () => {
@@ -57,6 +71,7 @@ export const RadioButton = () => {
         hls?.destroy();
         hls = undefined;
         resetPlaybackAudioClock();
+        refreshMediaSessionSoon();
     };
 
     onMount(() => {
@@ -99,6 +114,7 @@ export const RadioButton = () => {
 
             if (trackStore.isPlay) (() => videoRef?.pause())();
             (() => videoRef?.play())();
+            refreshMediaSessionSoon();
         });
 
         document.body.addEventListener("keydown", (event) => {
@@ -123,9 +139,18 @@ export const RadioButton = () => {
                 ref={videoRef}
                 onPause={handlePause}
                 onPlay={handlePlay}
-                onPlaying={() => updatePlaybackAudioClock(videoRef)}
-                onTimeUpdate={() => updatePlaybackAudioClock(videoRef)}
-                onRateChange={() => updatePlaybackAudioClock(videoRef)}
+                onPlaying={() => {
+                    updatePlaybackAudioClock(videoRef);
+                    refreshMediaSessionSoon();
+                }}
+                onTimeUpdate={() => {
+                    updatePlaybackAudioClock(videoRef);
+                    refreshMediaSessionPosition();
+                }}
+                onRateChange={() => {
+                    updatePlaybackAudioClock(videoRef);
+                    refreshMediaSessionSoon();
+                }}
             ></audio>
             <div class={styles.box}>
                 {trackStore.isPlay ? (

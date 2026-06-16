@@ -5,22 +5,25 @@ import { trackStore } from "../store/track";
 import { isValidURL } from "../utils/url";
 
 const DEFAULT_STATION_TITLE = "Airstation";
+const MEDIA_SESSION_REAPPLY_DELAYS_MS = [150, 750, 1500];
 
 export const MediaSession = () => {
     onMount(() => {
-        loadStationInfo().catch((error) => console.log(error));
+        loadStationInfo()
+            .then(() => refreshMediaSessionSoon())
+            .catch((error) => console.log(error));
     });
 
     createEffect(() => {
-        updateMediaSessionMetadata();
+        refreshMediaSessionMetadata();
     });
 
     createEffect(() => {
-        updateMediaSessionPlaybackState();
+        refreshMediaSessionPlaybackState();
     });
 
     createEffect(() => {
-        updateMediaSessionPosition();
+        refreshMediaSessionPosition();
     });
 
     onCleanup(() => {
@@ -50,6 +53,21 @@ export const setMediaSessionActionHandlers = (media?: HTMLMediaElement) => {
     });
 };
 
+export const refreshMediaSession = () => {
+    refreshMediaSessionMetadata();
+    refreshMediaSessionPlaybackState();
+    refreshMediaSessionPosition();
+};
+
+export const refreshMediaSessionSoon = () => {
+    refreshMediaSession();
+    window.requestAnimationFrame(refreshMediaSession);
+
+    MEDIA_SESSION_REAPPLY_DELAYS_MS.forEach((delay) => {
+        window.setTimeout(refreshMediaSession, delay);
+    });
+};
+
 export const clearMediaSessionActionHandlers = () => {
     const mediaSession = getMediaSession();
     if (!mediaSession) return;
@@ -59,7 +77,7 @@ export const clearMediaSessionActionHandlers = () => {
     setActionHandler(mediaSession, "stop", null);
 };
 
-const updateMediaSessionMetadata = () => {
+const refreshMediaSessionMetadata = () => {
     const mediaSession = getMediaSession();
     if (!mediaSession || typeof MediaMetadata === "undefined") return;
 
@@ -71,7 +89,7 @@ const updateMediaSessionMetadata = () => {
     });
 };
 
-const updateMediaSessionPlaybackState = () => {
+const refreshMediaSessionPlaybackState = () => {
     const mediaSession = getMediaSession();
     if (!mediaSession) return;
 
@@ -83,10 +101,10 @@ const updateMediaSessionPlaybackState = () => {
     mediaSession.playbackState = trackStore.trackName ? "paused" : "none";
 };
 
-const updateMediaSessionPosition = () => {
+export const refreshMediaSessionPosition = () => {
     const mediaSession = getMediaSession();
     if (!mediaSession || typeof mediaSession.setPositionState !== "function") return;
-    if (!hasSongMetadata() || trackStore.durationMs <= 0) {
+    if (!hasTrackMetadata() || trackStore.durationMs <= 0) {
         clearMediaSessionPosition();
         return;
     }
@@ -117,12 +135,12 @@ const clearMediaSessionPosition = () => {
 };
 
 const metadataTitle = () => {
-    if (hasSongMetadata()) return trackStore.trackName;
+    if (hasTrackMetadata()) return trackStore.trackName;
     return stationStore.info?.name || DEFAULT_STATION_TITLE;
 };
 
 const metadataArtist = () => {
-    if (hasSongMetadata()) return trackStore.trackArtist || stationStore.info?.name || DEFAULT_STATION_TITLE;
+    if (hasTrackMetadata()) return trackStore.trackArtist || stationStore.info?.name || DEFAULT_STATION_TITLE;
     return stationStore.info?.location || "";
 };
 
@@ -138,8 +156,8 @@ const metadataArtwork = (): MediaImage[] => {
     return artwork;
 };
 
-const hasSongMetadata = () => {
-    return trackStore.netEaseID > 0 && trackStore.trackName.trim().length > 0;
+const hasTrackMetadata = () => {
+    return trackStore.isPlay && trackStore.trackName.trim().length > 0;
 };
 
 const currentTimeMs = () => {
