@@ -4,6 +4,7 @@ import { PlaybackLyrics } from "../api/types";
 export const [trackStore, setTrackStore] = createStore({
     trackName: "",
     trackArtist: "",
+    coverURL: "",
     trackID: "",
     netEaseID: 0,
     elapsedMs: 0,

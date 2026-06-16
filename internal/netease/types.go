@@ -59,6 +59,7 @@ type Song struct {
 	Name     string
 	Artists  []string
 	Album    string
+	CoverURL string
 	Duration float64
 }
 
@@ -96,6 +97,7 @@ func (s *Song) Track(bitRate int) *track.Track {
 		ID:       songTrackID(s.ID),
 		Name:     s.Name,
 		Artist:   artist,
+		CoverURL: s.CoverURL,
 		Path:     "",
 		Duration: s.Duration,
 		BitRate:  bitRate,

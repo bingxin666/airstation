@@ -21,6 +21,7 @@ export const CurrentTrack = () => {
                 setTrackStore({
                     trackName: e.data,
                     trackArtist: "",
+                    coverURL: "",
                     trackID: "",
                     netEaseID: 0,
                     elapsedMs: 0,

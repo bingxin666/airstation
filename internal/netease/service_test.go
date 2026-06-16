@@ -262,7 +262,7 @@ func TestHTTPClient_PlaylistParsesExamplePlaylistShape(t *testing.T) {
 				Artists: []rawArtist{
 					{Name: "Kirara Magic"},
 				},
-				Album: rawAlbum{Name: "A Pocket of Moss and Magic"},
+				Album: rawAlbum{Name: "A Pocket of Moss and Magic", PicURL: "https://p1.music.126.net/cover.jpg"},
 				DT:    211015,
 			},
 		},
@@ -288,6 +288,9 @@ func TestHTTPClient_PlaylistParsesExamplePlaylistShape(t *testing.T) {
 	if song.Album != "A Pocket of Moss and Magic" {
 		t.Fatalf("album = %q", song.Album)
 	}
+	if song.CoverURL != "https://p1.music.126.net/cover.jpg" {
+		t.Fatalf("cover url = %q", song.CoverURL)
+	}
 
 	ids := raw.trackIDs()
 	if len(ids) != 2 || ids[0] != 3382894554 || ids[1] != 2156452103 {
@@ -302,7 +305,7 @@ func TestHTTPClient_SongDetailParsesExamplePlaylistShape(t *testing.T) {
 		Artists: []rawArtistOld{
 			{Name: "Kirara Magic"},
 		},
-		Album:    rawAlbum{Name: "A Pocket of Moss and Magic"},
+		Album:    rawAlbum{Name: "A Pocket of Moss and Magic", Pic: 123456789},
 		Duration: 211015,
 	}
 
@@ -321,6 +324,13 @@ func TestHTTPClient_SongDetailParsesExamplePlaylistShape(t *testing.T) {
 	}
 	if song.Album != "A Pocket of Moss and Magic" {
 		t.Fatalf("album = %q", song.Album)
+	}
+	if song.CoverURL != "https://p1.music.126.net/123456789.jpg" {
+		t.Fatalf("cover url = %q", song.CoverURL)
+	}
+	track := song.Track(128)
+	if track.CoverURL != song.CoverURL {
+		t.Fatalf("track cover url = %q, want %q", track.CoverURL, song.CoverURL)
 	}
 }
 

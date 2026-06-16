@@ -9,6 +9,7 @@ export const syncPlaybackTrack = async () => {
         setTrackStore({
             trackName: "",
             trackArtist: "",
+            coverURL: "",
             trackID: "",
             netEaseID: 0,
             elapsedMs: 0,
@@ -31,6 +32,7 @@ export const syncPlaybackTrack = async () => {
     setTrackStore({
         trackName: playback.currentTrack.name,
         trackArtist: playback.currentTrack.artist || "",
+        coverURL: playback.currentTrack.coverURL || "",
         trackID: playback.currentTrack.id,
         netEaseID: requestedNetEaseID,
         elapsedMs: playback.currentTrackElapsed * 1000,

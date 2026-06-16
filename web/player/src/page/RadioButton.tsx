@@ -83,6 +83,7 @@ export const RadioButton = () => {
             setTrackStore({
                 trackName: "",
                 trackArtist: "",
+                coverURL: "",
                 trackID: "",
                 netEaseID: 0,
                 elapsedMs: 0,
@@ -103,6 +104,7 @@ export const RadioButton = () => {
                 setTrackStore({
                     trackName: e.data,
                     trackArtist: "",
+                    coverURL: "",
                     trackID: "",
                     netEaseID: 0,
                     elapsedMs: 0,

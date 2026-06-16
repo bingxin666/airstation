@@ -333,7 +333,19 @@ type rawArtistOld struct {
 }
 
 type rawAlbum struct {
-	Name string `json:"name"`
+	Name   string `json:"name"`
+	PicURL string `json:"picUrl"`
+	Pic    int64  `json:"pic"`
+}
+
+func (a rawAlbum) coverURL() string {
+	if strings.TrimSpace(a.PicURL) != "" {
+		return a.PicURL
+	}
+	if a.Pic > 0 {
+		return fmt.Sprintf("https://p1.music.126.net/%d.jpg", a.Pic)
+	}
+	return ""
 }
 
 func (p rawPlaylist) trackIDs() []int64 {
@@ -359,6 +371,7 @@ func (t rawTrack) song() *Song {
 		Name:     t.Name,
 		Artists:  artists,
 		Album:    t.Album.Name,
+		CoverURL: t.Album.coverURL(),
 		Duration: float64(t.DT) / 1000,
 	}
 }
@@ -376,6 +389,7 @@ func (t rawTrackOld) song() *Song {
 		Name:     t.Name,
 		Artists:  artists,
 		Album:    t.Album.Name,
+		CoverURL: t.Album.coverURL(),
 		Duration: float64(t.Duration) / 1000,
 	}
 }

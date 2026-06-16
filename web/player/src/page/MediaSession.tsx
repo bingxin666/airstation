@@ -149,11 +149,26 @@ const metadataAlbum = () => {
 };
 
 const metadataArtwork = (): MediaImage[] => {
-    const artwork = [stationStore.info?.logoURL, stationStore.info?.faviconURL]
+    const artwork = [hasTrackMetadata() ? trackStore.coverURL : "", stationStore.info?.logoURL, stationStore.info?.faviconURL]
         .filter((url): url is string => Boolean(url && isValidURL(url)))
-        .map((src) => ({ src }));
+        .flatMap((src) => mediaArtwork(src));
 
     return artwork;
+};
+
+const mediaArtwork = (src: string): MediaImage[] => {
+    return [
+        { src, sizes: "512x512", type: imageMimeType(src) },
+        { src, sizes: "256x256", type: imageMimeType(src) },
+        { src, sizes: "128x128", type: imageMimeType(src) },
+    ];
+};
+
+const imageMimeType = (src: string) => {
+    const pathname = new URL(src, window.location.href).pathname.toLowerCase();
+    if (pathname.endsWith(".png")) return "image/png";
+    if (pathname.endsWith(".webp")) return "image/webp";
+    return "image/jpeg";
 };
 
 const hasTrackMetadata = () => {
