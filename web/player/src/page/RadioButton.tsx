@@ -7,6 +7,7 @@ import { getCssVariable } from "../utils/document";
 import { getHueFromHex } from "../utils/color";
 import { syncPlaybackTrack } from "../store/playback";
 import { resetPlaybackAudioClock, setActivePlaybackFragment, updatePlaybackAudioClock } from "../store/playbackClock";
+import { clearMediaSessionActionHandlers, setMediaSessionActionHandlers } from "./MediaSession";
 
 const STREAM_SOURCE = "/stream";
 const PLAYBACK_SYNC_INTERVAL_MS = 15000;
@@ -59,6 +60,8 @@ export const RadioButton = () => {
     };
 
     onMount(() => {
+        setMediaSessionActionHandlers(videoRef);
+
         addEventListener(EVENTS.pause, (_e: MessageEvent<string>) => {
             stopPlaybackSync();
             resetPlaybackAudioClock();
@@ -110,6 +113,7 @@ export const RadioButton = () => {
         stopPlaybackSync();
         hls?.destroy();
         resetPlaybackAudioClock();
+        clearMediaSessionActionHandlers();
     });
 
     return (

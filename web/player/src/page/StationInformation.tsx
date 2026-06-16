@@ -1,13 +1,9 @@
 import { Accessor, Component, createSignal, onMount } from "solid-js";
 import pageStyles from "./Page.module.css";
 import styles from "./StationInformation.module.css";
-import { airstationAPI } from "../api";
 import { DESKTOP_WIDTH } from "../const";
-import { StationInfo } from "../api/types";
-import { isValidURL } from "../utils/url";
-import { isValidHexColor } from "../utils/color";
-import { setCssVariable, setFavicon, setPageTitle } from "../utils/document";
 import { addEventListener, EVENTS } from "../store/events";
+import { loadStationInfo, refreshStationInfo, stationStore } from "../store/station";
 
 export const StationInformation = () => {
     const [isOpen, setIsOpen] = createSignal(false);
@@ -30,47 +26,12 @@ const parseLinks = (rawLinks: string): { title: string; url: string }[] => {
     }));
 };
 
-const parseTheme = (rawTheme: string) => {
-    const [bgStart, bgEnd, bgIcon, text, accent, bgImage] = rawTheme.split(";");
-
-    if (bgStart && isValidHexColor(bgStart)) setCssVariable("--bg-gradient-start", bgStart);
-    if (bgEnd && isValidHexColor(bgEnd)) setCssVariable("--bg-gradient-end", bgEnd);
-    if (bgIcon && isValidHexColor(bgIcon)) setCssVariable("--bg-icon", bgIcon);
-    if (text && isValidHexColor(text)) setCssVariable("--text-color", text);
-
-    if (accent && isValidHexColor(accent)) {
-        setCssVariable("--accent-color", accent);
-    } else {
-        setCssVariable("--accent-color", "");
-    }
-
-    if (bgImage && isValidURL(bgImage)) {
-        document.body.style.backgroundImage = `url(${bgImage})`;
-    } else {
-        document.body.style.backgroundImage = "";
-    }
-};
-
 const Card: Component<{ isOpen: Accessor<boolean>; close: () => void }> = ({ isOpen, close }) => {
-    const [info, setInfo] = createSignal<StationInfo | null>(null);
-
-    const loadInfo = async () => {
-        try {
-            const h = await airstationAPI.getStationInfo();
-            setInfo(h);
-            if (h.name) setPageTitle(h.name);
-            if (isValidURL(h.faviconURL)) setFavicon(h.faviconURL);
-            if (h.theme) parseTheme(h.theme);
-        } catch (error) {
-            console.log(error);
-        }
-    };
-
     onMount(() => {
-        loadInfo();
+        loadStationInfo().catch((error) => console.log(error));
 
         addEventListener(EVENTS.changeTheme, (_e: MessageEvent<string>) => {
-            loadInfo();
+            refreshStationInfo().catch((error) => console.log(error));
         });
     });
 
@@ -84,21 +45,23 @@ const Card: Component<{ isOpen: Accessor<boolean>; close: () => void }> = ({ isO
                 <div role="button" class={pageStyles.close_icon} onClick={close}></div>
             </div>
 
-            {info()?.logoURL && <img src={info()?.logoURL} alt={info?.name} class={styles.logo} />}
+            {stationStore.info?.logoURL && (
+                <img src={stationStore.info.logoURL} alt={stationStore.info.name} class={styles.logo} />
+            )}
 
             <div class={styles.content}>
-                <div class={styles.title}>{info()?.name}</div>
+                <div class={styles.title}>{stationStore.info?.name}</div>
 
                 <div class={styles.metadata}>
-                    {info()?.location && <span class={styles.location}>{info()!.location}</span>}
-                    {info()?.timezone && <span class={styles.timezone}>{info()!.timezone}</span>}
+                    {stationStore.info?.location && <span class={styles.location}>{stationStore.info.location}</span>}
+                    {stationStore.info?.timezone && <span class={styles.timezone}>{stationStore.info.timezone}</span>}
                 </div>
 
-                <div class={styles.description} innerHTML={info()?.description} />
+                <div class={styles.description} innerHTML={stationStore.info?.description} />
 
-                {info()?.links && (
+                {stationStore.info?.links && (
                     <div class={styles.footer}>
-                        {parseLinks(info()?.links!).map((link) => (
+                        {parseLinks(stationStore.info.links).map((link) => (
                             <a href={link.url} target="_blank" rel="noreferrer">
                                 {link.title}
                             </a>
