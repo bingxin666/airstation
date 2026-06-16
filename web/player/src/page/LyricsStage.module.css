@@ -44,4 +44,20 @@
     --amll-lp-bg-color: transparent;
     --amll-lp-font-size: clamp(24px, 4vw, 42px);
     --amll-lp-current-line-font-size: clamp(30px, 5vw, 54px);
+    font-family:
+        "SF Pro Display",
+        "SF Pro Text",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI Variable Display",
+        "Segoe UI",
+        "Helvetica Neue",
+        "Noto Sans SC",
+        "PingFang SC",
+        Arial,
+        sans-serif;
+    font-weight: 700;
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
 }

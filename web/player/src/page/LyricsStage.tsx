@@ -1,5 +1,5 @@
 import { createEffect, createMemo, onCleanup, Show, untrack } from "solid-js";
-import { LayoutAlignAnchor, LyricPlayer, type LyricLine } from "@applemusic-like-lyrics/core";
+import { LayoutAlignAnchor, LyricPlayer, type LyricLine, type LyricWord } from "@applemusic-like-lyrics/core";
 import "@applemusic-like-lyrics/core/style.css";
 import { parseLrc, parseYrc, type LyricLine as ParsedLyricLine } from "@applemusic-like-lyrics/lyric";
 import { correctedPlaybackTimeMs } from "../store/playbackClock";
@@ -8,6 +8,7 @@ import styles from "./LyricsStage.module.css";
 
 const TRANSLATION_SYNC_TOLERANCE_MS = 1200;
 const TRANSLATION_WINDOW_PADDING_MS = 250;
+const MIN_VISIBLE_WORD_DURATION_MS = 90;
 
 type ParsedLyrics = {
     mode: "word" | "line" | "text" | "none";
@@ -229,7 +230,7 @@ const toCoreLines = (lines: ParsedLyricLine[]): LyricLine[] => {
                 finiteTimestamp(line.words[line.words.length - 1]?.endTime) ??
                 startTime + 4000;
             const endTime = Number.isFinite(line.endTime) && line.endTime > startTime ? line.endTime : inferredEndTime;
-            const words = line.words.length
+            const rawWords = line.words.length
                 ? line.words.map((word) => ({
                       word: word.word,
                       startTime: finiteTimestamp(word.startTime) ?? startTime,
@@ -237,18 +238,119 @@ const toCoreLines = (lines: ParsedLyricLine[]): LyricLine[] => {
                       romanWord: word.romanWord,
                   }))
                 : [{ word: "", startTime, endTime }];
+            const words = sanitizeTimedWords(rawWords, endTime);
+            const lineStartTime = finiteTimestamp(words[0]?.startTime) ?? startTime;
+            const lineEndTime =
+                finiteTimestamp(words[words.length - 1]?.endTime) ?? Math.max(endTime, lineStartTime + 1);
 
             return {
                 words,
                 translatedLyric: line.translatedLyric || "",
                 romanLyric: line.romanLyric || "",
-                startTime,
-                endTime,
+                startTime: lineStartTime,
+                endTime: Math.max(lineEndTime, lineStartTime + 1),
                 isBG: line.isBG || false,
                 isDuet: line.isDuet || false,
             };
         })
         .filter((line) => line.words.some((word) => word.word.trim() !== ""));
+};
+
+const sanitizeTimedWords = (words: LyricWord[], lineEndTime: number): LyricWord[] => {
+    const normalized = words.map(normalizedWord).filter((word) => word.word.length > 0);
+    const withoutZeroDuration = mergeZeroDurationWords(normalized, lineEndTime);
+
+    return mergeTooShortWords(withoutZeroDuration, lineEndTime);
+};
+
+const normalizedWord = (word: LyricWord): LyricWord => {
+    const startTime = finiteTimestamp(word.startTime) ?? 0;
+    const endTime = Math.max(finiteTimestamp(word.endTime) ?? startTime, startTime);
+
+    return {
+        ...word,
+        startTime,
+        endTime,
+    };
+};
+
+const mergeZeroDurationWords = (words: LyricWord[], lineEndTime: number): LyricWord[] => {
+    const result: LyricWord[] = [];
+
+    words.forEach((word, index) => {
+        if (word.endTime > word.startTime) {
+            result.push(word);
+            return;
+        }
+
+        if (result.length > 0) {
+            appendWordText(result, word);
+            return;
+        }
+
+        const next = words[index + 1];
+        if (next) {
+            next.word = word.word + next.word;
+            next.startTime = Math.min(word.startTime, next.startTime);
+            return;
+        }
+
+        result.push(expandWord(word, lineEndTime));
+    });
+
+    return result;
+};
+
+const mergeTooShortWords = (words: LyricWord[], lineEndTime: number): LyricWord[] => {
+    const result: LyricWord[] = [];
+
+    for (let index = 0; index < words.length; index++) {
+        const word = words[index];
+        const duration = word.endTime - word.startTime;
+        if (duration >= MIN_VISIBLE_WORD_DURATION_MS || !isShortAttachableWord(word.word)) {
+            result.push(word);
+            continue;
+        }
+
+        const next = words[index + 1];
+        if (next) {
+            next.word = word.word + next.word;
+            next.startTime = Math.min(word.startTime, next.startTime);
+            continue;
+        }
+
+        if (result.length > 0) {
+            appendWordText(result, word);
+            continue;
+        }
+
+        result.push(expandWord(word, lineEndTime));
+    }
+
+    return result;
+};
+
+const appendWordText = (words: LyricWord[], word: LyricWord) => {
+    const previous = words[words.length - 1];
+    words[words.length - 1] = {
+        ...previous,
+        word: previous.word + word.word,
+        endTime: Math.max(previous.endTime, word.endTime),
+    };
+};
+
+const expandWord = (word: LyricWord, lineEndTime: number): LyricWord => {
+    const targetEndTime = word.startTime + MIN_VISIBLE_WORD_DURATION_MS;
+    const endTime = Number.isFinite(lineEndTime) && lineEndTime > word.startTime ? Math.min(targetEndTime, lineEndTime) : targetEndTime;
+
+    return {
+        ...word,
+        endTime: Math.max(endTime, word.startTime + 1),
+    };
+};
+
+const isShortAttachableWord = (word: string) => {
+    return /^[\s'"’`-]*(?:[A-Za-z]{1,3}|[,.!?;:，。！？、]+)[\s'"’`-]*$/.test(word);
 };
 
 const finiteTimestamp = (value: number | undefined) => {
