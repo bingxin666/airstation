@@ -57,6 +57,7 @@ export const LyricsStage = () => {
         if (!hostRef || player || parsed().mode === "text" || parsed().mode === "none") return;
 
         player = new LyricPlayer();
+        player.setOptimizeOptions({ tryAdvanceStartTime: false });
         player.setEnableBlur(true);
         player.setEnableScale(true);
         player.setAlignAnchor(LayoutAlignAnchor.Center);
